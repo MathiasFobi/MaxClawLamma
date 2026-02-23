@@ -3,6 +3,7 @@ import type { MarketplaceInstalledRecord, MarketplaceItemSummary, MarketplaceMan
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs } from '@/components/ui/tabs-custom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import {
   useInstallMarketplaceItem,
   useManageMarketplaceItem,
@@ -391,6 +392,7 @@ export function MarketplacePage() {
 
   const installMutation = useInstallMarketplaceItem();
   const manageMutation = useManageMarketplaceItem();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const installedRecords = useMemo(
     () => installedQuery.data?.records ?? [],
@@ -479,7 +481,7 @@ export function MarketplacePage() {
     installMutation.mutate({ type: item.type, spec: item.install.spec, kind: item.install.kind });
   };
 
-  const handleManage = (action: MarketplaceManageAction, record: MarketplaceInstalledRecord) => {
+  const handleManage = async (action: MarketplaceManageAction, record: MarketplaceInstalledRecord) => {
     if (manageMutation.isPending) {
       return;
     }
@@ -490,7 +492,12 @@ export function MarketplacePage() {
     }
 
     if (action === 'uninstall') {
-      const confirmed = window.confirm(`Confirm ${action} ${targetId}?`);
+      const confirmed = await confirm({
+        title: `Uninstall ${targetId}?`,
+        description: 'This will remove the extension. You can install it again from the marketplace.',
+        confirmLabel: 'Uninstall',
+        variant: 'destructive'
+      });
       if (!confirmed) {
         return;
       }
@@ -597,6 +604,7 @@ export function MarketplacePage() {
           onNext={() => setPage((current) => (totalPages > 0 ? Math.min(totalPages, current + 1) : current + 1))}
         />
       )}
+      <ConfirmDialog />
     </div>
   );
 }

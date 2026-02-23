@@ -459,13 +459,14 @@ function collectMarketplaceInstalledView(options: UiRouterOptions): MarketplaceI
   };
 }
 
-function resolvePluginManageTargetId(options: UiRouterOptions, rawTargetId: string): string {
+function resolvePluginManageTargetId(options: UiRouterOptions, rawTargetId: string, rawSpec?: string): string {
   const targetId = rawTargetId.trim();
-  if (!targetId) {
+  if (!targetId && !rawSpec) {
     return rawTargetId;
   }
 
-  const normalizedTarget = normalizePluginNpmSpec(targetId).toLowerCase();
+  const normalizedTarget = targetId ? normalizePluginNpmSpec(targetId).toLowerCase() : "";
+  const normalizedSpec = rawSpec ? normalizePluginNpmSpec(rawSpec).toLowerCase() : "";
   const installed = collectMarketplaceInstalledView(options);
   const pluginRecords = installed.records.filter((record) => record.type === "plugin");
   const lowerTargetId = targetId.toLowerCase();
@@ -477,14 +478,25 @@ function resolvePluginManageTargetId(options: UiRouterOptions, rawTargetId: stri
     }
   }
 
-  for (const record of pluginRecords) {
-    const normalizedSpec = normalizePluginNpmSpec(record.spec).toLowerCase();
-    if (normalizedSpec === normalizedTarget && record.id && record.id.trim().length > 0) {
-      return record.id;
+  if (normalizedTarget) {
+    for (const record of pluginRecords) {
+      const normalizedRecordSpec = normalizePluginNpmSpec(record.spec).toLowerCase();
+      if (normalizedRecordSpec === normalizedTarget && record.id && record.id.trim().length > 0) {
+        return record.id;
+      }
     }
   }
 
-  return targetId;
+  if (normalizedSpec && normalizedSpec !== normalizedTarget) {
+    for (const record of pluginRecords) {
+      const normalizedRecordSpec = normalizePluginNpmSpec(record.spec).toLowerCase();
+      if (normalizedRecordSpec === normalizedSpec && record.id && record.id.trim().length > 0) {
+        return record.id;
+      }
+    }
+  }
+
+  return targetId || rawSpec || rawTargetId;
 }
 
 function sanitizeMarketplaceItem<T extends Record<string, unknown>>(item: T): T {
@@ -623,8 +635,9 @@ async function manageMarketplaceItem(params: {
       ? params.body.spec.trim()
       : "";
 
+  const rawSpec = typeof params.body.spec === "string" ? params.body.spec.trim() : "";
   const targetId = type === "plugin"
-    ? resolvePluginManageTargetId(params.options, requestedTargetId)
+    ? resolvePluginManageTargetId(params.options, requestedTargetId, rawSpec)
     : requestedTargetId;
 
   if ((type !== "plugin" && type !== "skill") || (action !== "enable" && action !== "disable" && action !== "uninstall") || !targetId) {

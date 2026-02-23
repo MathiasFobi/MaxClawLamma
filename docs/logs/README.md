@@ -1,5 +1,6 @@
 # Logs
 
+- `docs/logs/v0.8.13-marketplace-uninstall-fix/README.md`
 - `docs/logs/v0.8.12-marketplace-toggle-state-sync/README.md`
 - `docs/logs/v0.8.6-nextclaw-ui-dist-sync/README.md`
 - `docs/logs/v0.5.3-ui-tooltip-marketplace-fix/README.md`

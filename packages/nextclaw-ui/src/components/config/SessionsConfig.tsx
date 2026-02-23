@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { SessionEntryView, SessionMessageView } from '@/api/types';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useDeleteSession, useSessionHistory, useSessions, useUpdateSession } from '@/hooks/useConfig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -143,6 +144,7 @@ export function SessionsConfig() {
 
   const updateSession = useUpdateSession();
   const deleteSession = useDeleteSession();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const sessions = useMemo(() => sessionsQuery.data?.sessions ?? [], [sessionsQuery.data?.sessions]);
   const selectedSession = useMemo(() => sessions.find(s => s.key === selectedKey), [sessions, selectedKey]);
@@ -188,16 +190,26 @@ export function SessionsConfig() {
     setIsEditingMeta(false); // Close editor on save
   };
 
-  const handleClearHistory = () => {
+  const handleClearHistory = async () => {
     if (!selectedKey) return;
-    if (window.confirm(t('sessionsClearHistory') + "?")) {
+    const confirmed = await confirm({
+      title: t('sessionsClearHistory') + '?',
+      variant: 'destructive',
+      confirmLabel: t('sessionsClearHistory')
+    });
+    if (confirmed) {
       updateSession.mutate({ key: selectedKey, data: { clearHistory: true } });
     }
   };
 
-  const handleDeleteSession = () => {
+  const handleDeleteSession = async () => {
     if (!selectedKey) return;
-    if (window.confirm(`${t('sessionsDeleteConfirm')} ?`)) {
+    const confirmed = await confirm({
+      title: t('sessionsDeleteConfirm') + '?',
+      variant: 'destructive',
+      confirmLabel: t('sessionsDeleteConfirm')
+    });
+    if (confirmed) {
       deleteSession.mutate(
         { key: selectedKey },
         {
@@ -393,6 +405,7 @@ export function SessionsConfig() {
           )}
         </div>
       </div>
+      <ConfirmDialog />
     </div>
   );
 }
