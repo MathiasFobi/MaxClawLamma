@@ -12,15 +12,22 @@ import {
   ProviderManager,
   APP_NAME,
   DEFAULT_WORKSPACE_DIR,
-  DEFAULT_WORKSPACE_PATH
+  DEFAULT_WORKSPACE_PATH,
 } from "@nextclaw/core";
-import { resolvePluginChannelMessageToolHints } from "@nextclaw/openclaw-compat";
+import {
+  getPluginChannelBindings,
+  resolvePluginChannelMessageToolHints,
+  setPluginRuntimeBridge,
+} from "@nextclaw/openclaw-compat";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
-import { RestartCoordinator, type RestartStrategy } from "./restart-coordinator.js";
+import {
+  RestartCoordinator,
+  type RestartStrategy,
+} from "./restart-coordinator.js";
 import { writeRestartSentinel } from "./restart-sentinel.js";
 import { installClawHubSkill } from "./skills/clawhub.js";
 import { runSelfUpdate } from "./update/runner.js";
@@ -30,13 +37,15 @@ import {
   isProcessRunning,
   printAgentResponse,
   prompt,
-  readServiceState
+  readServiceState,
 } from "./utils.js";
 import {
   loadPluginRegistry,
   logPluginDiagnostics,
+  mergePluginConfigView,
   toExtensionRegistry,
-  PluginCommands
+  toPluginConfigView,
+  PluginCommands,
 } from "./commands/plugins.js";
 import { ConfigCommands } from "./commands/config.js";
 import { ChannelCommands } from "./commands/channels.js";
@@ -60,7 +69,7 @@ import type {
   StartCommandOptions,
   StatusCommandOptions,
   UiCommandOptions,
-  UpdateCommandOptions
+  UpdateCommandOptions,
 } from "./types.js";
 
 export const LOGO = "🤖";
@@ -87,16 +96,16 @@ export class CliRuntime {
     this.workspaceManager = new WorkspaceManager(this.logo);
 
     this.serviceCommands = new ServiceCommands({
-      requestRestart: (params) => this.requestRestart(params)
+      requestRestart: (params) => this.requestRestart(params),
     });
     this.configCommands = new ConfigCommands({
-      requestRestart: (params) => this.requestRestart(params)
+      requestRestart: (params) => this.requestRestart(params),
     });
     this.pluginCommands = new PluginCommands();
     this.channelCommands = new ChannelCommands({
       logo: this.logo,
       getBridgeDir: () => this.workspaceManager.getBridgeDir(),
-      requestRestart: (params) => this.requestRestart(params)
+      requestRestart: (params) => this.requestRestart(params),
     });
     this.cronCommands = new CronCommands();
     this.diagnosticsCommands = new DiagnosticsCommands({ logo: this.logo });
@@ -105,8 +114,10 @@ export class CliRuntime {
       readServiceState,
       isProcessRunning,
       currentPid: () => process.pid,
-      restartBackgroundService: async (reason) => this.restartBackgroundService(reason),
-      scheduleProcessExit: (delayMs, reason) => this.scheduleProcessExit(delayMs, reason)
+      restartBackgroundService: async (reason) =>
+        this.restartBackgroundService(reason),
+      scheduleProcessExit: (delayMs, reason) =>
+        this.scheduleProcessExit(delayMs, reason),
     });
   }
 
@@ -133,17 +144,22 @@ export class CliRuntime {
       }
 
       const uiHost = FORCED_PUBLIC_UI_HOST;
-      const uiPort = typeof state.uiPort === "number" && Number.isFinite(state.uiPort) ? state.uiPort : 18791;
+      const uiPort =
+        typeof state.uiPort === "number" && Number.isFinite(state.uiPort)
+          ? state.uiPort
+          : 18791;
 
-      console.log(`Applying changes (${reason}): restarting ${APP_NAME} background service...`);
+      console.log(
+        `Applying changes (${reason}): restarting ${APP_NAME} background service...`,
+      );
       await this.serviceCommands.stopService();
       await this.serviceCommands.startService({
         uiOverrides: {
           enabled: true,
           host: uiHost,
-          port: uiPort
+          port: uiPort,
         },
-        open: false
+        open: false,
       });
       return true;
     })();
@@ -161,7 +177,10 @@ export class CliRuntime {
     delayMs?: number;
   }): void {
     const strategy = params.strategy ?? "background-service-or-manual";
-    if (strategy !== "background-service-or-exit" && strategy !== "exit-process") {
+    if (
+      strategy !== "background-service-or-exit" &&
+      strategy !== "exit-process"
+    ) {
       return;
     }
     if (this.selfRelaunchArmed) {
@@ -173,10 +192,17 @@ export class CliRuntime {
       return;
     }
 
-    const uiPort = typeof state.uiPort === "number" && Number.isFinite(state.uiPort) ? state.uiPort : 18791;
+    const uiPort =
+      typeof state.uiPort === "number" && Number.isFinite(state.uiPort)
+        ? state.uiPort
+        : 18791;
     const delayMs =
-      typeof params.delayMs === "number" && Number.isFinite(params.delayMs) ? Math.max(0, Math.floor(params.delayMs)) : 100;
-    const cliPath = process.env.NEXTCLAW_SELF_RELAUNCH_CLI?.trim() || fileURLToPath(new URL("./index.js", import.meta.url));
+      typeof params.delayMs === "number" && Number.isFinite(params.delayMs)
+        ? Math.max(0, Math.floor(params.delayMs))
+        : 100;
+    const cliPath =
+      process.env.NEXTCLAW_SELF_RELAUNCH_CLI?.trim() ||
+      fileURLToPath(new URL("./index.js", import.meta.url));
     const startArgs = [cliPath, "start", "--ui-port", String(uiPort)];
     const serviceStatePath = resolve(getDataDir(), "run", "service.json");
     const helperScript = [
@@ -200,7 +226,7 @@ export class CliRuntime {
       "}",
       "function hasReplacementService() {",
       "  try {",
-      "    const raw = readFileSync(serviceStatePath, \"utf-8\");",
+      '    const raw = readFileSync(serviceStatePath, "utf-8");',
       "    const state = JSON.parse(raw);",
       "    const pid = Number(state?.pid);",
       "    return Number.isFinite(pid) && pid > 0 && pid !== parentPid && isRunning(pid);",
@@ -210,7 +236,7 @@ export class CliRuntime {
       "}",
       "function tryStart() {",
       "  spawnSync(nodePath, startArgs, {",
-      "    stdio: \"ignore\",",
+      '    stdio: "ignore",',
       "    env: process.env,",
       "    timeout: startTimeoutMs",
       "  });",
@@ -234,14 +260,14 @@ export class CliRuntime {
       "    setTimeout(tick, retryIntervalMs);",
       "  };",
       "  tick();",
-      "}, delayMs);"
+      "}, delayMs);",
     ].join("\n");
 
     try {
       const helper = spawn(process.execPath, ["-e", helperScript], {
         detached: true,
         stdio: "ignore",
-        env: process.env
+        env: process.env,
       });
       helper.unref();
       this.selfRelaunchArmed = true;
@@ -255,17 +281,20 @@ export class CliRuntime {
     this.armManagedServiceRelaunch({
       reason: params.reason,
       strategy: params.strategy,
-      delayMs: params.delayMs
+      delayMs: params.delayMs,
     });
 
     const result = await this.restartCoordinator.requestRestart({
       reason: params.reason,
       strategy: params.strategy,
       delayMs: params.delayMs,
-      manualMessage: params.manualMessage
+      manualMessage: params.manualMessage,
     });
 
-    if (result.status === "manual-required" || result.status === "restart-in-progress") {
+    if (
+      result.status === "manual-required" ||
+      result.status === "restart-in-progress"
+    ) {
       console.log(result.message);
       return;
     }
@@ -280,9 +309,12 @@ export class CliRuntime {
     console.warn(result.message);
   }
 
-  private async writeRestartSentinelFromExecContext(reason: string): Promise<void> {
+  private async writeRestartSentinelFromExecContext(
+    reason: string,
+  ): Promise<void> {
     const sessionKeyRaw = process.env.NEXTCLAW_RUNTIME_SESSION_KEY;
-    const sessionKey = typeof sessionKeyRaw === "string" ? sessionKeyRaw.trim() : "";
+    const sessionKey =
+      typeof sessionKeyRaw === "string" ? sessionKeyRaw.trim() : "";
     if (!sessionKey) {
       return;
     }
@@ -295,20 +327,26 @@ export class CliRuntime {
         sessionKey,
         stats: {
           reason: reason || "cli.restart",
-          strategy: "exec-tool"
-        }
+          strategy: "exec-tool",
+        },
       });
     } catch (error) {
-      console.warn(`Warning: failed to write restart sentinel from exec context: ${String(error)}`);
+      console.warn(
+        `Warning: failed to write restart sentinel from exec context: ${String(error)}`,
+      );
     }
   }
 
   async onboard(): Promise<void> {
-    console.warn(`Warning: ${APP_NAME} onboard is deprecated. Use "${APP_NAME} init" instead.`);
+    console.warn(
+      `Warning: ${APP_NAME} onboard is deprecated. Use "${APP_NAME} init" instead.`,
+    );
     await this.init({ source: "onboard" });
   }
 
-  async init(options: { source?: string; auto?: boolean; force?: boolean } = {}): Promise<void> {
+  async init(
+    options: { source?: string; auto?: boolean; force?: boolean } = {},
+  ): Promise<void> {
     const source = options.source ?? "init";
     const prefix = options.auto ? "Auto init" : "Init";
     const force = Boolean(options.force);
@@ -329,7 +367,10 @@ export class CliRuntime {
         : expandHome(workspaceSetting);
     const workspaceExisted = existsSync(workspacePath);
     mkdirSync(workspacePath, { recursive: true });
-    const templateResult = this.workspaceManager.createWorkspaceTemplates(workspacePath, { force });
+    const templateResult = this.workspaceManager.createWorkspaceTemplates(
+      workspacePath,
+      { force },
+    );
 
     if (createdConfig) {
       console.log(`✓ ${prefix}: created config at ${configPath}`);
@@ -340,7 +381,11 @@ export class CliRuntime {
     for (const file of templateResult.created) {
       console.log(`✓ ${prefix}: created ${file}`);
     }
-    if (!createdConfig && workspaceExisted && templateResult.created.length === 0) {
+    if (
+      !createdConfig &&
+      workspaceExisted &&
+      templateResult.created.length === 0
+    ) {
       console.log(`${prefix}: already initialized.`);
     }
 
@@ -350,13 +395,15 @@ export class CliRuntime {
       console.log(`  1. Add your API key to ${configPath}`);
       console.log(`  2. Chat: ${APP_NAME} agent -m "Hello!"`);
     } else {
-      console.log(`Tip: Run "${APP_NAME} init${force ? " --force" : ""}" to re-run initialization if needed.`);
+      console.log(
+        `Tip: Run "${APP_NAME} init${force ? " --force" : ""}" to re-run initialization if needed.`,
+      );
     }
   }
 
   async gateway(opts: GatewayCommandOptions): Promise<void> {
     const uiOverrides: Partial<Config["ui"]> = {
-      host: FORCED_PUBLIC_UI_HOST
+      host: FORCED_PUBLIC_UI_HOST,
     };
     if (opts.ui) {
       uiOverrides.enabled = true;
@@ -374,12 +421,15 @@ export class CliRuntime {
     const uiOverrides: Partial<Config["ui"]> = {
       enabled: true,
       host: FORCED_PUBLIC_UI_HOST,
-      open: Boolean(opts.open)
+      open: Boolean(opts.open),
     };
     if (opts.port) {
       uiOverrides.port = Number(opts.port);
     }
-    await this.serviceCommands.startGateway({ uiOverrides, allowMissingProvider: true });
+    await this.serviceCommands.startGateway({
+      uiOverrides,
+      allowMissingProvider: true,
+    });
   }
 
   async start(opts: StartCommandOptions): Promise<void> {
@@ -387,7 +437,7 @@ export class CliRuntime {
     const uiOverrides: Partial<Config["ui"]> = {
       enabled: true,
       host: FORCED_PUBLIC_UI_HOST,
-      open: false
+      open: false,
     };
     if (opts.uiPort) {
       uiOverrides.port = Number(opts.uiPort);
@@ -395,7 +445,7 @@ export class CliRuntime {
 
     await this.serviceCommands.startService({
       uiOverrides,
-      open: Boolean(opts.open)
+      open: Boolean(opts.open),
     });
   }
 
@@ -420,7 +470,7 @@ export class CliRuntime {
     const uiOverrides: Partial<Config["ui"]> = {
       enabled: true,
       host: FORCED_PUBLIC_UI_HOST,
-      open: false
+      open: false,
     };
     if (opts.uiPort) {
       uiOverrides.port = Number(opts.uiPort);
@@ -428,7 +478,7 @@ export class CliRuntime {
 
     await this.serviceCommands.runForeground({
       uiOverrides,
-      open: Boolean(opts.open)
+      open: Boolean(opts.open),
     });
   }
 
@@ -443,78 +493,122 @@ export class CliRuntime {
     const extensionRegistry = toExtensionRegistry(pluginRegistry);
     logPluginDiagnostics(pluginRegistry);
 
-    const bus = new MessageBus();
-    const provider = this.serviceCommands.createProvider(config) ?? this.serviceCommands.createMissingProvider(config);
-    const providerManager = new ProviderManager({
-      defaultProvider: provider,
-      config
-    });
-    const agentLoop = new AgentLoop({
-      bus,
-      providerManager,
-      workspace,
-      model: config.agents.defaults.model,
-      maxIterations: config.agents.defaults.maxToolIterations,
-      maxTokens: config.agents.defaults.maxTokens,
-      contextTokens: config.agents.defaults.contextTokens,
-      braveApiKey: config.tools.web.search.apiKey || undefined,
-      execConfig: config.tools.exec,
-      restrictToWorkspace: config.tools.restrictToWorkspace,
-      contextConfig: config.agents.context,
-      config,
-      extensionRegistry,
-      resolveMessageToolHints: ({ channel, accountId }) =>
-        resolvePluginChannelMessageToolHints({
-          registry: pluginRegistry,
-          channel,
-          cfg: loadConfig(),
-          accountId
-        })
+    const pluginChannelBindings = getPluginChannelBindings(pluginRegistry);
+    setPluginRuntimeBridge({
+      loadConfig: () => toPluginConfigView(loadConfig(), pluginChannelBindings),
+      writeConfigFile: async (nextConfigView) => {
+        if (
+          !nextConfigView ||
+          typeof nextConfigView !== "object" ||
+          Array.isArray(nextConfigView)
+        ) {
+          throw new Error(
+            "plugin runtime writeConfigFile expects an object config",
+          );
+        }
+        const current = loadConfig();
+        const next = mergePluginConfigView(
+          current,
+          nextConfigView,
+          pluginChannelBindings,
+        );
+        saveConfig(next);
+      },
     });
 
-    if (opts.message) {
-      const response = await agentLoop.processDirect({
-        content: opts.message,
-        sessionKey: opts.session ?? "cli:default",
-        channel: "cli",
-        chatId: "direct",
-        metadata: typeof opts.model === "string" && opts.model.trim() ? { model: opts.model.trim() } : {}
+    try {
+      const bus = new MessageBus();
+      const provider =
+        this.serviceCommands.createProvider(config) ??
+        this.serviceCommands.createMissingProvider(config);
+      const providerManager = new ProviderManager({
+        defaultProvider: provider,
+        config,
       });
-      printAgentResponse(response);
-      return;
-    }
-
-    console.log(`${this.logo} Interactive mode (type exit or Ctrl+C to quit)\n`);
-    const historyFile = join(getDataDir(), "history", "cli_history");
-    const historyDir = resolve(historyFile, "..");
-    mkdirSync(historyDir, { recursive: true });
-
-    const history = existsSync(historyFile) ? readFileSync(historyFile, "utf-8").split("\n").filter(Boolean) : [];
-    const rl = createInterface({ input: process.stdin, output: process.stdout });
-    rl.on("close", () => {
-      const merged = history.concat((rl as unknown as { history: string[] }).history ?? []);
-      writeFileSync(historyFile, merged.join("\n"));
-      process.exit(0);
-    });
-
-    let running = true;
-    while (running) {
-      const line = await prompt(rl, "You: ");
-      const trimmed = line.trim();
-      if (!trimmed) {
-        continue;
-      }
-      if (EXIT_COMMANDS.has(trimmed.toLowerCase())) {
-        rl.close();
-        running = false;
-        break;
-      }
-      const response = await agentLoop.processDirect({
-        content: trimmed,
-        sessionKey: opts.session ?? "cli:default",
-        metadata: typeof opts.model === "string" && opts.model.trim() ? { model: opts.model.trim() } : {}
+      const agentLoop = new AgentLoop({
+        bus,
+        providerManager,
+        workspace,
+        model: config.agents.defaults.model,
+        maxIterations: config.agents.defaults.maxToolIterations,
+        maxTokens: config.agents.defaults.maxTokens,
+        contextTokens: config.agents.defaults.contextTokens,
+        braveApiKey: config.tools.web.search.apiKey || undefined,
+        execConfig: config.tools.exec,
+        restrictToWorkspace: config.tools.restrictToWorkspace,
+        contextConfig: config.agents.context,
+        config,
+        extensionRegistry,
+        resolveMessageToolHints: ({ channel, accountId }) =>
+          resolvePluginChannelMessageToolHints({
+            registry: pluginRegistry,
+            channel,
+            cfg: loadConfig(),
+            accountId,
+          }),
       });
-      printAgentResponse(response);
+
+      if (opts.message) {
+        const response = await agentLoop.processDirect({
+          content: opts.message,
+          sessionKey: opts.session ?? "cli:default",
+          channel: "cli",
+          chatId: "direct",
+          metadata:
+            typeof opts.model === "string" && opts.model.trim()
+              ? { model: opts.model.trim() }
+              : {},
+        });
+        printAgentResponse(response);
+        return;
+      }
+
+      console.log(
+        `${this.logo} Interactive mode (type exit or Ctrl+C to quit)\n`,
+      );
+      const historyFile = join(getDataDir(), "history", "cli_history");
+      const historyDir = resolve(historyFile, "..");
+      mkdirSync(historyDir, { recursive: true });
+
+      const history = existsSync(historyFile)
+        ? readFileSync(historyFile, "utf-8").split("\n").filter(Boolean)
+        : [];
+      const rl = createInterface({
+        input: process.stdin,
+        output: process.stdout,
+      });
+      rl.on("close", () => {
+        const merged = history.concat(
+          (rl as unknown as { history: string[] }).history ?? [],
+        );
+        writeFileSync(historyFile, merged.join("\n"));
+        process.exit(0);
+      });
+
+      let running = true;
+      while (running) {
+        const line = await prompt(rl, "You: ");
+        const trimmed = line.trim();
+        if (!trimmed) {
+          continue;
+        }
+        if (EXIT_COMMANDS.has(trimmed.toLowerCase())) {
+          rl.close();
+          running = false;
+          break;
+        }
+        const response = await agentLoop.processDirect({
+          content: trimmed,
+          sessionKey: opts.session ?? "cli:default",
+          metadata:
+            typeof opts.model === "string" && opts.model.trim()
+              ? { model: opts.model.trim() }
+              : {},
+        });
+        printAgentResponse(response);
+      }
+    } finally {
+      setPluginRuntimeBridge(null);
     }
   }
 
@@ -523,7 +617,9 @@ export class CliRuntime {
     if (opts.timeout !== undefined) {
       const parsed = Number(opts.timeout);
       if (!Number.isFinite(parsed) || parsed <= 0) {
-        console.error("Invalid --timeout value. Provide milliseconds (e.g. 1200000).");
+        console.error(
+          "Invalid --timeout value. Provide milliseconds (e.g. 1200000).",
+        );
         process.exit(1);
       }
       timeoutMs = parsed;
@@ -536,7 +632,9 @@ export class CliRuntime {
 
     const printSteps = () => {
       for (const step of result.steps) {
-        console.log(`- ${step.cmd} ${step.args.join(" ")} (code ${step.code ?? "?"})`);
+        console.log(
+          `- ${step.cmd} ${step.args.join(" ")} (code ${step.code ?? "?"})`,
+        );
         if (step.stderr) {
           console.log(`  stderr: ${step.stderr}`);
         }
@@ -584,11 +682,17 @@ export class CliRuntime {
     await this.pluginCommands.pluginsDisable(id);
   }
 
-  async pluginsUninstall(id: string, opts: PluginsUninstallOptions = {}): Promise<void> {
+  async pluginsUninstall(
+    id: string,
+    opts: PluginsUninstallOptions = {},
+  ): Promise<void> {
     await this.pluginCommands.pluginsUninstall(id, opts);
   }
 
-  async pluginsInstall(pathOrSpec: string, opts: PluginsInstallOptions = {}): Promise<void> {
+  async pluginsInstall(
+    pathOrSpec: string,
+    opts: PluginsInstallOptions = {},
+  ): Promise<void> {
     await this.pluginCommands.pluginsInstall(pathOrSpec, opts);
   }
 
@@ -600,7 +704,11 @@ export class CliRuntime {
     this.configCommands.configGet(pathExpr, opts);
   }
 
-  async configSet(pathExpr: string, value: string, opts: ConfigSetOptions = {}): Promise<void> {
+  async configSet(
+    pathExpr: string,
+    value: string,
+    opts: ConfigSetOptions = {},
+  ): Promise<void> {
     await this.configCommands.configSet(pathExpr, value, opts);
   }
 
@@ -656,14 +764,16 @@ export class CliRuntime {
     dir?: string;
     force?: boolean;
   }): Promise<void> {
-    const workdir = options.workdir ? expandHome(options.workdir) : getWorkspacePath();
+    const workdir = options.workdir
+      ? expandHome(options.workdir)
+      : getWorkspacePath();
     const result = await installClawHubSkill({
       slug: options.slug,
       version: options.version,
       registry: options.registry,
       workdir,
       dir: options.dir,
-      force: options.force
+      force: options.force,
     });
 
     const versionLabel = result.version ?? "latest";

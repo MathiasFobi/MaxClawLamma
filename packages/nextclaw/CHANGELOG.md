@@ -1,5 +1,11 @@
 # nextclaw
 
+## 0.6.35
+
+### Patch Changes
+
+- fix: bridge plugin runtime config in CLI agent path so channel-owned tools read plugin config correctly
+
 ## 0.6.34
 
 ### Patch Changes
