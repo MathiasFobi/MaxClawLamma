@@ -203,7 +203,9 @@ function RecordActionButtons(props: {
   const targetId = props.record.id || props.record.spec;
   const busyForRecord = props.state.isPending && props.state.targetId === targetId;
   const canToggle = props.record.type === 'plugin';
-  const canUninstall = props.record.type === 'plugin' || props.record.source === 'workspace';
+  const canUninstallPlugin = props.record.type === 'plugin' && props.record.origin !== 'bundled';
+  const canUninstallSkill = props.record.type === 'skill' && props.record.source === 'workspace';
+  const canUninstall = canUninstallPlugin || canUninstallSkill;
 
   return (
     <div className="flex items-center gap-2">

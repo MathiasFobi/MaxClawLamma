@@ -3,6 +3,7 @@
   "private": true,
   "packageManager": "pnpm@9.15.1",
   "workspaces": [
+    "apps/*",
     "packages/*",
     "packages/extensions/*",
     "workers/*"
@@ -25,8 +26,9 @@
     "release:version": "pnpm changeset version",
     "release:publish": "pnpm release:check && pnpm changeset publish && pnpm changeset tag",
     "release": "pnpm changeset && pnpm release:version && pnpm release:publish",
-    "deploy:pages": "pnpm --filter @nextclaw/landing build && pnpm dlx wrangler pages deploy packages/landing/dist --project-name nextclaw-landing --branch master",
-    "deploy:docs": "pnpm --filter @nextclaw/docs build && pnpm dlx wrangler pages deploy packages/docs/.vitepress/dist --project-name nextclaw-docs --branch master"
+    "deploy:pages": "pnpm --filter @nextclaw/landing build && pnpm dlx wrangler pages deploy apps/landing/dist --project-name nextclaw-landing --branch master",
+    "deploy:docs": "pnpm --filter @nextclaw/docs build && pnpm dlx wrangler pages deploy apps/docs/.vitepress/dist --project-name nextclaw-docs --branch master",
+    "deploy:workers": "pnpm -r --filter \"./workers/*\" run deploy"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.8"

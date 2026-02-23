@@ -866,20 +866,27 @@ export class ServiceCommands {
     force: boolean | undefined
   ): { message: string; output?: string } | null {
     const workspace = getWorkspacePath(loadConfig().agents.defaults.workspace);
-    const loader = new SkillsLoader(workspace);
-    const builtin = loader.listSkills(false).find((skill) => skill.name === slug && skill.source === "builtin");
-
-    if (!builtin) {
-      return null;
-    }
-
     const destination = join(workspace, "skills", slug);
     const destinationSkillFile = join(destination, "SKILL.md");
+
     if (existsSync(destinationSkillFile) && !force) {
       return {
         message: `${slug} is already installed`,
         output: destination
       };
+    }
+
+    const loader = new SkillsLoader(workspace);
+    const builtin = loader.listSkills(false).find((skill) => skill.name === slug && skill.source === "builtin");
+
+    if (!builtin) {
+      if (existsSync(destinationSkillFile)) {
+        return {
+          message: `${slug} is already installed`,
+          output: destination
+        };
+      }
+      return null;
     }
 
     mkdirSync(join(workspace, "skills"), { recursive: true });

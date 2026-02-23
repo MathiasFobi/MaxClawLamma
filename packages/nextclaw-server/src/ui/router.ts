@@ -42,6 +42,10 @@ type UiRouterOptions = {
 
 const DEFAULT_MARKETPLACE_API_BASE = "https://nextclaw-marketplace-api.15353764479037.workers.dev";
 
+const NEXTCLAW_PLUGIN_NPM_PREFIX = "@nextclaw/channel-plugin-";
+const MARKETPLACE_REMOTE_PAGE_SIZE = 100;
+const MARKETPLACE_REMOTE_MAX_PAGES = 20;
+
 function ok<T>(data: T) {
   return { ok: true, data };
 }
@@ -165,11 +169,59 @@ function collectMarketplaceInstalledView(options: UiRouterOptions): MarketplaceI
     discoveredPlugins = [];
   }
 
+  const readPluginPriority = (plugin: ReturnType<typeof buildPluginStatusReport>["plugins"][number]): number => {
+    const hasInstallRecord = Boolean(pluginRecordsMap[plugin.id]);
+
+    const statusScore = plugin.status === "loaded"
+      ? 300
+      : plugin.status === "disabled"
+        ? 200
+        : 100;
+
+    let originScore = 0;
+    if (hasInstallRecord) {
+      originScore = plugin.origin === "workspace"
+        ? 40
+        : plugin.origin === "global"
+          ? 30
+          : plugin.origin === "config"
+            ? 20
+            : 10;
+    } else {
+      originScore = plugin.origin === "bundled"
+        ? 40
+        : plugin.origin === "workspace"
+          ? 30
+          : plugin.origin === "global"
+            ? 20
+            : 10;
+    }
+
+    return statusScore + originScore;
+  };
+
+  const discoveredById = new Map<string, ReturnType<typeof buildPluginStatusReport>["plugins"][number]>();
   for (const plugin of discoveredPlugins) {
+    const existing = discoveredById.get(plugin.id);
+    if (!existing) {
+      discoveredById.set(plugin.id, plugin);
+      continue;
+    }
+
+    if (readPluginPriority(plugin) > readPluginPriority(existing)) {
+      discoveredById.set(plugin.id, plugin);
+    }
+  }
+
+  for (const plugin of discoveredById.values()) {
     const installRecord = pluginRecordsMap[plugin.id];
+    const entry = pluginEntries[plugin.id];
     const normalizedSpec = typeof installRecord?.spec === "string" && installRecord.spec.trim().length > 0
       ? installRecord.spec.trim()
       : plugin.id;
+    const enabled = entry?.enabled === false ? false : plugin.enabled;
+    const runtimeStatus = entry?.enabled === false ? "disabled" : plugin.status;
+
     pluginRecords.push({
       type: "plugin",
       id: plugin.id,
@@ -177,8 +229,8 @@ function collectMarketplaceInstalledView(options: UiRouterOptions): MarketplaceI
       label: plugin.name && plugin.name.trim().length > 0 ? plugin.name : plugin.id,
       source: plugin.source,
       installedAt: installRecord?.installedAt,
-      enabled: plugin.enabled,
-      runtimeStatus: plugin.status,
+      enabled,
+      runtimeStatus,
       origin: plugin.origin,
       installPath: installRecord?.installPath
     });
@@ -264,6 +316,81 @@ function sanitizeMarketplaceItem<T extends Record<string, unknown>>(item: T): T 
   const next = { ...item } as T & { metrics?: unknown };
   delete next.metrics;
   return next;
+}
+
+function toPositiveInt(raw: string | undefined, fallback: number): number {
+  if (!raw) {
+    return fallback;
+  }
+
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+
+  return parsed;
+}
+
+function collectKnownSkillNames(options: UiRouterOptions): Set<string> {
+  const config = loadConfigOrDefault(options.configPath);
+  const loader = new SkillsLoader(getWorkspacePathFromConfig(config));
+  return new Set(loader.listSkills(false).map((skill) => skill.name));
+}
+
+function isSupportedMarketplaceItem(
+  item: MarketplaceItemView | MarketplaceListView["items"][number],
+  knownSkillNames: Set<string>
+): boolean {
+  if (item.type === "plugin") {
+    return item.install.kind === "npm" && item.install.spec.startsWith(NEXTCLAW_PLUGIN_NPM_PREFIX);
+  }
+
+  return item.install.kind === "builtin" && knownSkillNames.has(item.install.spec);
+}
+
+async function fetchAllMarketplaceItems(params: {
+  baseUrl: string;
+  query: Record<string, string | undefined>;
+}): Promise<
+  | { ok: true; data: { sort: MarketplaceListView["sort"]; query?: string; items: MarketplaceListView["items"] } }
+  | { ok: false; status: number; message: string }
+> {
+  const allItems: MarketplaceListView["items"] = [];
+  let remotePage = 1;
+  let remoteTotalPages = 1;
+  let sort: MarketplaceListView["sort"] = "relevance";
+  let query: MarketplaceListView["query"];
+
+  while (remotePage <= remoteTotalPages && remotePage <= MARKETPLACE_REMOTE_MAX_PAGES) {
+    const result = await fetchMarketplaceData<MarketplaceListView>({
+      baseUrl: params.baseUrl,
+      path: "/api/v1/items",
+      query: {
+        ...params.query,
+        page: String(remotePage),
+        pageSize: String(MARKETPLACE_REMOTE_PAGE_SIZE)
+      }
+    });
+
+    if (!result.ok) {
+      return result;
+    }
+
+    allItems.push(...result.data.items);
+    remoteTotalPages = result.data.totalPages;
+    sort = result.data.sort;
+    query = result.data.query;
+    remotePage += 1;
+  }
+
+  return {
+    ok: true,
+    data: {
+      sort,
+      query,
+      items: allItems
+    }
+  };
 }
 
 async function installMarketplaceItem(params: {
@@ -377,9 +504,8 @@ function registerMarketplaceRoutes(app: Hono, options: UiRouterOptions, marketpl
 
   app.get("/api/marketplace/items", async (c) => {
     const query = c.req.query();
-    const result = await fetchMarketplaceData<MarketplaceListView>({
+    const result = await fetchAllMarketplaceItems({
       baseUrl: marketplaceBaseUrl,
-      path: "/api/v1/items",
       query: {
         q: query.q,
         type: query.type,
@@ -394,9 +520,24 @@ function registerMarketplaceRoutes(app: Hono, options: UiRouterOptions, marketpl
       return c.json(err("MARKETPLACE_UNAVAILABLE", result.message), result.status as 500);
     }
 
+    const knownSkillNames = collectKnownSkillNames(options);
+    const filteredItems = result.data.items
+      .map((item) => sanitizeMarketplaceItem(item))
+      .filter((item) => isSupportedMarketplaceItem(item, knownSkillNames));
+
+    const pageSize = Math.min(100, toPositiveInt(query.pageSize, 20));
+    const requestedPage = toPositiveInt(query.page, 1);
+    const totalPages = filteredItems.length === 0 ? 0 : Math.ceil(filteredItems.length / pageSize);
+    const currentPage = totalPages === 0 ? 1 : Math.min(requestedPage, totalPages);
+
     return c.json(ok({
-      ...result.data,
-      items: result.data.items.map((item) => sanitizeMarketplaceItem(item))
+      total: filteredItems.length,
+      page: currentPage,
+      pageSize,
+      totalPages,
+      sort: result.data.sort,
+      query: result.data.query,
+      items: filteredItems.slice((currentPage - 1) * pageSize, currentPage * pageSize)
     }));
   });
 
@@ -415,7 +556,13 @@ function registerMarketplaceRoutes(app: Hono, options: UiRouterOptions, marketpl
       return c.json(err("MARKETPLACE_UNAVAILABLE", result.message), result.status as 500);
     }
 
-    return c.json(ok(sanitizeMarketplaceItem(result.data)));
+    const knownSkillNames = collectKnownSkillNames(options);
+    const sanitized = sanitizeMarketplaceItem(result.data);
+    if (!isSupportedMarketplaceItem(sanitized, knownSkillNames)) {
+      return c.json(err("NOT_FOUND", "marketplace item not supported by nextclaw"), 404);
+    }
+
+    return c.json(ok(sanitized));
   });
 
   app.get("/api/marketplace/recommendations", async (c) => {
@@ -433,9 +580,15 @@ function registerMarketplaceRoutes(app: Hono, options: UiRouterOptions, marketpl
       return c.json(err("MARKETPLACE_UNAVAILABLE", result.message), result.status as 500);
     }
 
+    const knownSkillNames = collectKnownSkillNames(options);
+    const filteredItems = result.data.items
+      .map((item) => sanitizeMarketplaceItem(item))
+      .filter((item) => isSupportedMarketplaceItem(item, knownSkillNames));
+
     return c.json(ok({
       ...result.data,
-      items: result.data.items.map((item) => sanitizeMarketplaceItem(item))
+      total: filteredItems.length,
+      items: filteredItems
     }));
   });
 

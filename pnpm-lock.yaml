@@ -12,7 +12,7 @@ importers:
         specifier: ^2.29.8
         version: 2.29.8(@types/node@20.19.33)
 
-  packages/docs:
+  apps/docs:
     devDependencies:
       vitepress:
         specifier: ^1.6.3
@@ -20,6 +20,30 @@ importers:
       vue:
         specifier: ^3.5.13
         version: 3.5.28(typescript@5.9.3)
+
+  apps/landing:
+    devDependencies:
+      autoprefixer:
+        specifier: ^10.4.20
+        version: 10.4.24(postcss@8.5.6)
+      lucide:
+        specifier: ^0.462.0
+        version: 0.462.0
+      postcss:
+        specifier: ^8.4.49
+        version: 8.5.6
+      tailwindcss:
+        specifier: ^3.4.15
+        version: 3.4.19(tsx@4.21.0)
+      tailwindcss-animate:
+        specifier: ^1.0.7
+        version: 1.0.7(tailwindcss@3.4.19(tsx@4.21.0))
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.1
+        version: 6.4.1(@types/node@20.19.33)(jiti@1.21.7)(tsx@4.21.0)
 
   packages/extensions/nextclaw-channel-plugin-dingtalk:
     dependencies:
@@ -168,30 +192,6 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
-
-  packages/landing:
-    devDependencies:
-      autoprefixer:
-        specifier: ^10.4.20
-        version: 10.4.24(postcss@8.5.6)
-      lucide:
-        specifier: ^0.462.0
-        version: 0.462.0
-      postcss:
-        specifier: ^8.4.49
-        version: 8.5.6
-      tailwindcss:
-        specifier: ^3.4.15
-        version: 3.4.19(tsx@4.21.0)
-      tailwindcss-animate:
-        specifier: ^1.0.7
-        version: 1.0.7(tailwindcss@3.4.19(tsx@4.21.0))
-      typescript:
-        specifier: ^5.6.3
-        version: 5.9.3
-      vite:
-        specifier: ^6.0.1
-        version: 6.4.1(@types/node@20.19.33)(jiti@1.21.7)(tsx@4.21.0)
 
   packages/nextclaw:
     dependencies:
