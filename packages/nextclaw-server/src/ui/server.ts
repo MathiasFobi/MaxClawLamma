@@ -40,7 +40,8 @@ export function startUiServer(options: UiServerOptions): UiServerHandle {
     "/",
     createUiRouter({
       configPath: options.configPath,
-      publish
+      publish,
+      marketplace: options.marketplace
     })
   );
 

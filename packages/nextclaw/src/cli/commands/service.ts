@@ -30,6 +30,7 @@ import { startUiServer } from "@nextclaw/server";
 import { closeSync, mkdirSync, openSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import chokidar from "chokidar";
 import { GatewayControllerImpl } from "../gateway/controller.js";
 import { ConfigReloader } from "../config-reloader.js";
@@ -758,7 +759,14 @@ export class ServiceCommands {
       host: uiConfig.host,
       port: uiConfig.port,
       configPath: getConfigPath(),
-      staticDir: uiStaticDir ?? undefined
+      staticDir: uiStaticDir ?? undefined,
+      marketplace: {
+        apiBaseUrl: process.env.NEXTCLAW_MARKETPLACE_API_BASE,
+        installer: {
+          installPlugin: (spec) => this.installMarketplacePlugin(spec),
+          installSkill: (params) => this.installMarketplaceSkill(params)
+        }
+      }
     });
     const uiUrl = `http://${uiServer.host}:${uiServer.port}`;
     console.log(`✓ UI API: ${uiUrl}/api`);
@@ -769,5 +777,83 @@ export class ServiceCommands {
     if (uiConfig.open) {
       openBrowser(uiUrl);
     }
+  }
+
+  private async installMarketplacePlugin(spec: string): Promise<{ message: string; output?: string }> {
+    const output = await this.runCliSubcommand(["plugins", "install", spec]);
+    const summary = this.pickLastOutputLine(output) ?? `Installed plugin: ${spec}`;
+    return { message: summary, output };
+  }
+
+  private async installMarketplaceSkill(params: {
+    slug: string;
+    version?: string;
+    registry?: string;
+    force?: boolean;
+  }): Promise<{ message: string; output?: string }> {
+    const args = ["skills", "install", params.slug];
+    if (params.version) {
+      args.push("--version", params.version);
+    }
+    if (params.registry) {
+      args.push("--registry", params.registry);
+    }
+    if (params.force) {
+      args.push("--force");
+    }
+
+    const output = await this.runCliSubcommand(args);
+    const summary = this.pickLastOutputLine(output) ?? `Installed skill: ${params.slug}`;
+    return { message: summary, output };
+  }
+
+  private runCliSubcommand(args: string[], timeoutMs = 180_000): Promise<string> {
+    const cliEntry = fileURLToPath(new URL("../index.js", import.meta.url));
+    return new Promise((resolvePromise, rejectPromise) => {
+      const child = spawn(process.execPath, [...process.execArgv, cliEntry, ...args], {
+        cwd: process.cwd(),
+        env: process.env,
+        stdio: ["ignore", "pipe", "pipe"]
+      });
+
+      let stdout = "";
+      let stderr = "";
+      child.stdout?.setEncoding("utf-8");
+      child.stderr?.setEncoding("utf-8");
+      child.stdout?.on("data", (chunk: string) => {
+        stdout += chunk;
+      });
+      child.stderr?.on("data", (chunk: string) => {
+        stderr += chunk;
+      });
+
+      const timer = setTimeout(() => {
+        child.kill("SIGTERM");
+        rejectPromise(new Error(`CLI command timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      child.on("error", (error) => {
+        clearTimeout(timer);
+        rejectPromise(new Error(`failed to start CLI command: ${String(error)}`));
+      });
+
+      child.on("close", (code) => {
+        clearTimeout(timer);
+        const output = `${stdout}\n${stderr}`.trim();
+        if (code === 0) {
+          resolvePromise(output);
+          return;
+        }
+        rejectPromise(new Error(output || `CLI command failed with code ${code ?? 1}`));
+      });
+    });
+  }
+
+  private pickLastOutputLine(output: string): string | null {
+    const lines = output
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    return lines.length > 0 ? lines[lines.length - 1] : null;
   }
 }

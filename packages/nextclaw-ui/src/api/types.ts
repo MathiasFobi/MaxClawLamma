@@ -241,3 +241,88 @@ export type WsEvent =
   | { type: 'config.reload.finished'; payload?: Record<string, unknown> }
   | { type: 'error'; payload: { message: string; code?: string } }
   | { type: 'connection.open'; payload?: Record<string, unknown> };
+
+export type MarketplaceItemType = 'plugin' | 'skill';
+
+export type MarketplaceSort = 'relevance' | 'updated' | 'downloads';
+
+export type MarketplaceInstallKind = 'npm' | 'clawhub' | 'git';
+
+export type MarketplaceInstallSpec = {
+  kind: MarketplaceInstallKind;
+  spec: string;
+  command: string;
+};
+
+export type MarketplaceItemMetrics = {
+  downloads30d?: number;
+  stars?: number;
+};
+
+export type MarketplaceItemSummary = {
+  id: string;
+  slug: string;
+  type: MarketplaceItemType;
+  name: string;
+  summary: string;
+  tags: string[];
+  author: string;
+  install: MarketplaceInstallSpec;
+  metrics?: MarketplaceItemMetrics;
+  updatedAt: string;
+};
+
+export type MarketplaceItemView = MarketplaceItemSummary & {
+  description?: string;
+  sourceRepo?: string;
+  homepage?: string;
+  publishedAt: string;
+};
+
+export type MarketplaceListView = {
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  sort: MarketplaceSort;
+  query?: string;
+  items: MarketplaceItemSummary[];
+};
+
+export type MarketplaceRecommendationView = {
+  sceneId: string;
+  title: string;
+  description?: string;
+  total: number;
+  items: MarketplaceItemSummary[];
+};
+
+export type MarketplaceInstalledRecord = {
+  type: MarketplaceItemType;
+  spec: string;
+  label?: string;
+  source?: string;
+  installedAt?: string;
+};
+
+export type MarketplaceInstalledView = {
+  total: number;
+  pluginSpecs: string[];
+  skillSpecs: string[];
+  records: MarketplaceInstalledRecord[];
+};
+
+export type MarketplaceInstallRequest = {
+  type: MarketplaceItemType;
+  spec: string;
+  version?: string;
+  registry?: string;
+  force?: boolean;
+};
+
+export type MarketplaceInstallResult = {
+  type: MarketplaceItemType;
+  spec: string;
+  message: string;
+  output?: string;
+};

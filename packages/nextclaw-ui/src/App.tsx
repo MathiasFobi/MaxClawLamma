@@ -5,6 +5,7 @@ import { ProvidersList } from '@/components/config/ProvidersList';
 import { ChannelsList } from '@/components/config/ChannelsList';
 import { RuntimeConfig } from '@/components/config/RuntimeConfig';
 import { SessionsConfig } from '@/components/config/SessionsConfig';
+import { MarketplacePage } from '@/components/marketplace/MarketplacePage';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { Toaster } from 'sonner';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
@@ -32,6 +33,7 @@ function AppContent() {
             <Route path="/channels" element={<ChannelsList />} />
             <Route path="/runtime" element={<RuntimeConfig />} />
             <Route path="/sessions" element={<SessionsConfig />} />
+            <Route path="/marketplace" element={<MarketplacePage />} />
             <Route path="/" element={<Navigate to="/model" replace />} />
             <Route path="*" element={<Navigate to="/model" replace />} />
           </Routes>

@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { DOCS_DEFAULT_BASE_URL, useDocBrowser } from './DocBrowserContext';
 import { cn } from '@/lib/utils';
+import { t } from '@/lib/i18n';
 import {
     ArrowLeft,
     ArrowRight,
@@ -17,7 +18,7 @@ import {
  * DocBrowser — An in-app micro-browser for documentation.
  * 
  * Supports two modes:
- * - `docked`: Renders as a right sidebar panel
+ * - `docked`: Renders as a right sidebar panel (horizontally resizable)
  * - `floating`: Renders as a draggable, resizable overlay
  */
 export function DocBrowser() {
@@ -32,8 +33,10 @@ export function DocBrowser() {
     const [isDragging, setIsDragging] = useState(false);
     const [floatPos, setFloatPos] = useState({ x: 120, y: 80 });
     const [floatSize, setFloatSize] = useState({ w: 480, h: 600 });
+    const [dockedWidth, setDockedWidth] = useState(420);
     const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
     const resizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(null);
+    const dockResizeRef = useRef<{ startX: number; startW: number } | null>(null);
 
     // Sync URL input with current URL
     useEffect(() => {
@@ -49,7 +52,6 @@ export function DocBrowser() {
         e.preventDefault();
         const input = urlInput.trim();
         if (!input) return;
-        // If it's a path, prepend the docs base URL
         if (input.startsWith('/')) {
             navigate(`${DOCS_DEFAULT_BASE_URL}${input}`);
         } else if (input.startsWith('http')) {
@@ -92,7 +94,7 @@ export function DocBrowser() {
         };
     }, [isDragging]);
 
-    // --- Resize logic (floating mode) ---
+    // --- Resize logic (floating mode — bottom-right corner) ---
     const onResizeStart = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -118,6 +120,26 @@ export function DocBrowser() {
         window.addEventListener('mouseup', onUp);
     }, [floatSize]);
 
+    // --- Horizontal resize logic (docked mode — left edge) ---
+    const onDockResizeStart = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dockResizeRef.current = { startX: e.clientX, startW: dockedWidth };
+        const onMove = (ev: MouseEvent) => {
+            if (!dockResizeRef.current) return;
+            // Dragging left should increase width (since resize handle is on the left edge)
+            const delta = dockResizeRef.current.startX - ev.clientX;
+            setDockedWidth(Math.max(320, Math.min(800, dockResizeRef.current.startW + delta)));
+        };
+        const onUp = () => {
+            dockResizeRef.current = null;
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+        };
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+    }, [dockedWidth]);
+
     if (!isOpen) return null;
 
     const isDocked = mode === 'docked';
@@ -125,14 +147,15 @@ export function DocBrowser() {
     const panel = (
         <div
             className={cn(
-                'flex flex-col bg-white overflow-hidden',
+                'flex flex-col bg-white overflow-hidden relative',
                 isDocked
-                    ? 'h-full w-[420px] border-l border-gray-200 shrink-0'
+                    ? 'h-full border-l border-gray-200 shrink-0'
                     : 'rounded-2xl shadow-2xl border border-gray-200',
             )}
             style={
-                !isDocked
-                    ? {
+                isDocked
+                    ? { width: dockedWidth }
+                    : {
                         position: 'fixed',
                         left: floatPos.x,
                         top: floatPos.y,
@@ -140,9 +163,16 @@ export function DocBrowser() {
                         height: floatSize.h,
                         zIndex: 9999,
                     }
-                    : undefined
             }
         >
+            {/* Docked mode: left-edge resize handle */}
+            {isDocked && (
+                <div
+                    className="absolute top-0 left-0 w-1.5 h-full cursor-ew-resize z-20 hover:bg-primary/10 transition-colors"
+                    onMouseDown={onDockResizeStart}
+                />
+            )}
+
             {/* Title Bar */}
             <div
                 className={cn(
@@ -153,20 +183,20 @@ export function DocBrowser() {
             >
                 <div className="flex items-center gap-2.5">
                     <BookOpen className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-semibold text-gray-900">帮助文档</span>
+                    <span className="text-sm font-semibold text-gray-900">{t('docBrowserTitle')}</span>
                 </div>
                 <div className="flex items-center gap-1">
                     <button
                         onClick={toggleMode}
                         className="hover:bg-gray-200 rounded-md p-1.5 text-gray-500 hover:text-gray-700 transition-colors"
-                        title={isDocked ? '悬浮窗口' : '固定到侧栏'}
+                        title={isDocked ? t('docBrowserFloatMode') : t('docBrowserDockMode')}
                     >
                         {isDocked ? <Maximize2 className="w-3.5 h-3.5" /> : <PanelRightOpen className="w-3.5 h-3.5" />}
                     </button>
                     <button
                         onClick={close}
                         className="hover:bg-gray-200 rounded-md p-1.5 text-gray-500 hover:text-gray-700 transition-colors"
-                        title="关闭"
+                        title={t('docBrowserClose')}
                     >
                         <X className="w-3.5 h-3.5" />
                     </button>
@@ -196,7 +226,7 @@ export function DocBrowser() {
                         type="text"
                         value={urlInput}
                         onChange={(e) => setUrlInput(e.target.value)}
-                        placeholder="搜索，也可以输入文档地址直接打开"
+                        placeholder={t('docBrowserSearchPlaceholder')}
                         className="w-full h-8 pl-8 pr-3 rounded-lg bg-gray-50 border border-gray-200 text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40 transition-colors placeholder:text-gray-400"
                     />
                 </form>
@@ -221,12 +251,12 @@ export function DocBrowser() {
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 text-xs text-primary hover:text-primary-hover font-medium transition-colors"
                 >
-                    文档中心打开
+                    {t('docBrowserOpenExternal')}
                     <ExternalLink className="w-3 h-3" />
                 </a>
             </div>
 
-            {/* Resize Handle (floating only) */}
+            {/* Resize Handle (floating only — bottom-right corner) */}
             {!isDocked && (
                 <div
                     className="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize flex items-center justify-center text-gray-300 hover:text-gray-500 transition-colors"

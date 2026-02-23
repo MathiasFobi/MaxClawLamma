@@ -1,5 +1,15 @@
 # nextclaw-server
 
+## 0.4.17
+
+### Patch Changes
+
+- feat(marketplace): add VSCode-style marketplace with installed state and install integration
+  - add marketplace query/install API on UI server
+  - connect install actions to existing CLI plugin/skill install commands
+  - add marketplace frontend page with search, filters, recommendations, and installed tab
+  - add installed-status API and UI badges/button states for installed items
+
 ## 0.4.16
 
 ### Patch Changes

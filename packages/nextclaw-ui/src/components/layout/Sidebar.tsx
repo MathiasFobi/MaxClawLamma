@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import { t } from '@/lib/i18n';
-import { Cpu, GitBranch, History, MessageSquare, Sparkles, BookOpen } from 'lucide-react';
+import { Cpu, GitBranch, History, MessageSquare, Sparkles, BookOpen, Store } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useDocBrowser } from '@/components/doc-browser';
 
@@ -29,6 +29,11 @@ const navItems = [
     target: '/sessions',
     label: t('sessions'),
     icon: History,
+  },
+  {
+    target: '/marketplace',
+    label: 'Marketplace',
+    icon: Store,
   }
 ];
 
@@ -95,7 +100,7 @@ export function Sidebar() {
             'h-4 w-4',
             docBrowser.isOpen ? 'text-primary' : 'text-gray-500'
           )} />
-          <span className="flex-1 text-left">帮助文档</span>
+          <span className="flex-1 text-left">{t('docBrowserHelp')}</span>
         </button>
       </div>
     </aside>

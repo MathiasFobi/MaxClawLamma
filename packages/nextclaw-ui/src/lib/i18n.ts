@@ -159,7 +159,16 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   feishuVerifyFailed: { zh: '验证失败', en: 'Verification failed' },
   enterTag: { zh: '输入后按回车...', en: 'Type and press Enter...' },
   headerName: { zh: 'Header 名称', en: 'Header Name' },
-  headerValue: { zh: 'Header 值', en: 'Header Value' }
+  headerValue: { zh: 'Header 值', en: 'Header Value' },
+
+  // Doc Browser
+  docBrowserTitle: { zh: '帮助文档', en: 'Help Docs' },
+  docBrowserSearchPlaceholder: { zh: '搜索，也可以输入文档地址直接打开', en: 'Search, or enter a doc URL to open' },
+  docBrowserOpenExternal: { zh: '文档中心打开', en: 'Open in Docs' },
+  docBrowserFloatMode: { zh: '悬浮窗口', en: 'Float Window' },
+  docBrowserDockMode: { zh: '固定到侧栏', en: 'Dock to Sidebar' },
+  docBrowserClose: { zh: '关闭', en: 'Close' },
+  docBrowserHelp: { zh: '帮助文档', en: 'Help Docs' },
 };
 
 export function t(key: string, lang: 'zh' | 'en' = 'en'): string {
