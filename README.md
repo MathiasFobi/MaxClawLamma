@@ -7,11 +7,11 @@
 [![npm](https://img.shields.io/npm/v/nextclaw)](https://www.npmjs.com/package/nextclaw)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-blue)](https://nodejs.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![LOC](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FPeiiii%2Fnextclaw%2Fmaster%2Fdocs%2Fmetrics%2Fcode-volume%2Flatest.json&query=%24.totals.codeLines&label=LOC&suffix=%20lines&color=7A4DFF)](docs/workflows/code-volume-monitoring.md)
-[![OpenClaw LOC](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FPeiiii%2Fnextclaw%2Fmaster%2Fdocs%2Fmetrics%2Fcode-volume%2Fcomparison.json&query=%24.benchmark.totals.codeLines&label=OpenClaw%20LOC&suffix=%20lines&color=6B7280)](docs/workflows/code-volume-monitoring.md)
-[![NextClaw vs OpenClaw](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FPeiiii%2Fnextclaw%2Fmaster%2Fdocs%2Fmetrics%2Fcode-volume%2Fcomparison.json&query=%24.comparison.basePercentOfBenchmark&label=NextClaw%20vs%20OpenClaw&suffix=%25&color=0EA5E9)](docs/workflows/code-volume-monitoring.md)
+[![LOC](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FPeiiii%2Fnextclaw%2Fmaster%2Fdocs%2Fmetrics%2Fcode-volume%2Flatest.json&query=%24.totals.codeLines&label=LOC&suffix=%20lines&color=7A4DFF)](https://docs.nextclaw.io)
+[![OpenClaw LOC](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FPeiiii%2Fnextclaw%2Fmaster%2Fdocs%2Fmetrics%2Fcode-volume%2Fcomparison.json&query=%24.benchmark.totals.codeLines&label=OpenClaw%20LOC&suffix=%20lines&color=6B7280)](https://docs.nextclaw.io)
+[![NextClaw vs OpenClaw](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FPeiiii%2Fnextclaw%2Fmaster%2Fdocs%2Fmetrics%2Fcode-volume%2Fcomparison.json&query=%24.comparison.basePercentOfBenchmark&label=NextClaw%20vs%20OpenClaw&suffix=%25&color=0EA5E9)](https://docs.nextclaw.io)
 
-[Why NextClaw?](#why-nextclaw) · [Quick Start](#-quick-start) · [Features](#-features) · [Screenshots](#-screenshots) · [Commands](#-commands) · [Channels](#-channels) · [Docs](docs/USAGE.md)
+[Why NextClaw?](#why-nextclaw) · [Quick Start](#-quick-start) · [Features](#-features) · [Screenshots](#-screenshots) · [Commands](#-commands) · [Channels](#-channels) · [Docs](https://docs.nextclaw.io)
 
 </div>
 
@@ -165,12 +165,12 @@ nextclaw stop   # stop the service
 
 ## 📚 Docs
 
-- [Configuration, providers, channels, cron](docs/USAGE.md)
-- [Multi-agent architecture: single Gateway, bindings, session isolation](docs/guides/multi-agent-architecture.md)
-- [RFC: Action Schema v1](docs/rfcs/action-schema-v1.md)
-- [Code volume monitoring workflow](docs/workflows/code-volume-monitoring.md)
-- [Marketplace Worker deploy workflow](docs/workflows/marketplace-worker-deploy.md)
-- [Marketplace read-only Worker API](workers/marketplace-api/README.md)
+- [Configuration, providers, channels, cron](https://docs.nextclaw.io/guide/configuration)
+- [Multi-agent architecture: single Gateway, bindings, session isolation](https://docs.nextclaw.io/guide/multi-agent)
+- [RFC: Action Schema v1](https://docs.nextclaw.io)
+- [Code volume monitoring workflow](https://docs.nextclaw.io)
+- [Marketplace Worker deploy workflow](https://docs.nextclaw.io)
+- [Marketplace read-only Worker API](https://github.com/Peiiii/nextclaw/blob/master/workers/marketplace-api/README.md)
 
 ---
 

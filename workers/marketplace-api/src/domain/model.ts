@@ -4,7 +4,7 @@ export type MarketplaceItemType = (typeof MARKETPLACE_ITEM_TYPES)[number];
 
 export type MarketplaceSort = "relevance" | "updated";
 
-export type MarketplaceInstallKind = "npm" | "clawhub" | "git";
+export type MarketplaceInstallKind = "npm" | "clawhub" | "git" | "builtin";
 
 export type MarketplaceInstallSpec = {
   kind: MarketplaceInstallKind;

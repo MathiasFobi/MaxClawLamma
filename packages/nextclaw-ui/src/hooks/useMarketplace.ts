@@ -6,9 +6,10 @@ import {
   fetchMarketplaceItems,
   fetchMarketplaceRecommendations,
   installMarketplaceItem,
+  manageMarketplaceItem,
   type MarketplaceListParams
 } from '@/api/marketplace';
-import type { MarketplaceInstallRequest, MarketplaceItemType } from '@/api/types';
+import type { MarketplaceInstallRequest, MarketplaceItemType, MarketplaceManageRequest } from '@/api/types';
 
 export function useMarketplaceItems(params: MarketplaceListParams) {
   return useQuery({
@@ -54,6 +55,22 @@ export function useInstallMarketplaceItem() {
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Install failed');
+    }
+  });
+}
+
+export function useManageMarketplaceItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: MarketplaceManageRequest) => manageMarketplaceItem(request),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['marketplace-installed'] });
+      queryClient.invalidateQueries({ queryKey: ['marketplace-items'] });
+      toast.success(result.message || `${result.action} success`);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Operation failed');
     }
   });
 }

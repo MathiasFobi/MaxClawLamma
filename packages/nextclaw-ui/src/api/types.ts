@@ -246,7 +246,7 @@ export type MarketplaceItemType = 'plugin' | 'skill';
 
 export type MarketplaceSort = 'relevance' | 'updated';
 
-export type MarketplaceInstallKind = 'npm' | 'clawhub' | 'git';
+export type MarketplaceInstallKind = 'npm' | 'clawhub' | 'git' | 'builtin';
 
 export type MarketplaceInstallSpec = {
   kind: MarketplaceInstallKind;
@@ -314,6 +314,7 @@ export type MarketplaceInstalledView = {
 export type MarketplaceInstallRequest = {
   type: MarketplaceItemType;
   spec: string;
+  kind?: MarketplaceInstallKind;
   version?: string;
   registry?: string;
   force?: boolean;
@@ -322,6 +323,23 @@ export type MarketplaceInstallRequest = {
 export type MarketplaceInstallResult = {
   type: MarketplaceItemType;
   spec: string;
+  message: string;
+  output?: string;
+};
+
+export type MarketplaceManageAction = 'enable' | 'disable' | 'uninstall';
+
+export type MarketplaceManageRequest = {
+  type: MarketplaceItemType;
+  action: MarketplaceManageAction;
+  id?: string;
+  spec?: string;
+};
+
+export type MarketplaceManageResult = {
+  type: MarketplaceItemType;
+  action: MarketplaceManageAction;
+  id: string;
   message: string;
   output?: string;
 };

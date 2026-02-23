@@ -23,6 +23,8 @@ import type {
   MarketplaceInstalledView,
   MarketplaceInstallRequest,
   MarketplaceInstallResult,
+  MarketplaceManageRequest,
+  MarketplaceManageResult,
   MarketplaceItemView,
   MarketplaceListView,
   MarketplaceRecommendationView,
@@ -291,6 +293,7 @@ async function installMarketplaceItem(params: {
     }
     result = await installer.installSkill({
       slug: spec,
+      kind: params.body.kind,
       version: params.body.version,
       registry: params.body.registry,
       force: params.body.force
@@ -301,6 +304,67 @@ async function installMarketplaceItem(params: {
   return {
     type,
     spec,
+    message: result.message,
+    output: result.output
+  };
+}
+
+async function manageMarketplaceItem(params: {
+  options: UiRouterOptions;
+  body: MarketplaceManageRequest;
+}): Promise<MarketplaceManageResult> {
+  const type = params.body.type;
+  const action = params.body.action;
+  const targetId = typeof params.body.id === "string" && params.body.id.trim().length > 0
+    ? params.body.id.trim()
+    : typeof params.body.spec === "string" && params.body.spec.trim().length > 0
+      ? params.body.spec.trim()
+      : "";
+
+  if ((type !== "plugin" && type !== "skill") || (action !== "enable" && action !== "disable" && action !== "uninstall") || !targetId) {
+    throw new Error("INVALID_BODY:type, action and non-empty id/spec are required");
+  }
+
+  const installer = params.options.marketplace?.installer;
+  if (!installer) {
+    throw new Error("NOT_AVAILABLE:marketplace installer is not configured");
+  }
+
+  let result: { message: string; output?: string };
+
+  if (type === "plugin") {
+    if (action === "enable") {
+      if (!installer.enablePlugin) {
+        throw new Error("NOT_AVAILABLE:plugin enable is not configured");
+      }
+      result = await installer.enablePlugin(targetId);
+    } else if (action === "disable") {
+      if (!installer.disablePlugin) {
+        throw new Error("NOT_AVAILABLE:plugin disable is not configured");
+      }
+      result = await installer.disablePlugin(targetId);
+    } else {
+      if (!installer.uninstallPlugin) {
+        throw new Error("NOT_AVAILABLE:plugin uninstall is not configured");
+      }
+      result = await installer.uninstallPlugin(targetId);
+    }
+  } else {
+    if (action !== "uninstall") {
+      throw new Error("NOT_AVAILABLE:skill only supports uninstall action");
+    }
+    if (!installer.uninstallSkill) {
+      throw new Error("NOT_AVAILABLE:skill uninstall is not configured");
+    }
+    result = await installer.uninstallSkill(targetId);
+  }
+
+  params.options.publish({ type: "config.updated", payload: { path: type === "plugin" ? "plugins" : "skills" } });
+
+  return {
+    type,
+    action,
+    id: targetId,
     message: result.message,
     output: result.output
   };
@@ -392,6 +456,26 @@ function registerMarketplaceRoutes(app: Hono, options: UiRouterOptions, marketpl
         return c.json(err("NOT_AVAILABLE", message.slice("NOT_AVAILABLE:".length)), 503);
       }
       return c.json(err("INSTALL_FAILED", message), 400);
+    }
+  });
+
+  app.post("/api/marketplace/manage", async (c) => {
+    const body = await readJson<MarketplaceManageRequest>(c.req.raw);
+    if (!body.ok || !body.data || typeof body.data !== "object") {
+      return c.json(err("INVALID_BODY", "invalid json body"), 400);
+    }
+    try {
+      const payload = await manageMarketplaceItem({ options, body: body.data });
+      return c.json(ok(payload));
+    } catch (error) {
+      const message = String(error);
+      if (message.startsWith("INVALID_BODY:")) {
+        return c.json(err("INVALID_BODY", message.slice("INVALID_BODY:".length)), 400);
+      }
+      if (message.startsWith("NOT_AVAILABLE:")) {
+        return c.json(err("NOT_AVAILABLE", message.slice("NOT_AVAILABLE:".length)), 503);
+      }
+      return c.json(err("MANAGE_FAILED", message), 400);
     }
   });
 }

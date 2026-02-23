@@ -3,8 +3,8 @@ import { Download, PackageSearch, Sparkles, Store } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tabs } from '@/components/ui/tabs-custom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useInstallMarketplaceItem, useMarketplaceInstalled, useMarketplaceItems, useMarketplaceRecommendations } from '@/hooks/useMarketplace';
-import type { MarketplaceInstalledRecord, MarketplaceItemSummary, MarketplaceSort } from '@/api/types';
+import { useInstallMarketplaceItem, useManageMarketplaceItem, useMarketplaceInstalled, useMarketplaceItems, useMarketplaceRecommendations } from '@/hooks/useMarketplace';
+import type { MarketplaceInstalledRecord, MarketplaceItemSummary, MarketplaceManageAction, MarketplaceSort } from '@/api/types';
 
 const PAGE_SIZE = 12;
 
@@ -14,6 +14,12 @@ type ScopeType = 'all' | 'installed';
 type InstallState = {
   isPending: boolean;
   installingSpec?: string;
+};
+
+type ManageState = {
+  isPending: boolean;
+  targetId?: string;
+  action?: MarketplaceManageAction;
 };
 
 type InstalledSpecSets = {
@@ -189,6 +195,42 @@ function EnabledStateBadge(props: { enabled?: boolean }) {
     : <span className="text-[11px] px-2 py-1 rounded-full font-semibold bg-amber-50 text-amber-700">Disabled</span>;
 }
 
+function RecordActionButtons(props: {
+  record: MarketplaceInstalledRecord;
+  state: ManageState;
+  onAction: (action: MarketplaceManageAction, record: MarketplaceInstalledRecord) => void;
+}) {
+  const targetId = props.record.id || props.record.spec;
+  const busyForRecord = props.state.isPending && props.state.targetId === targetId;
+  const canToggle = props.record.type === 'plugin';
+  const canUninstall = props.record.type === 'plugin' || props.record.source === 'workspace';
+
+  return (
+    <div className="flex items-center gap-2">
+      {canToggle && (
+        <button
+          disabled={props.state.isPending}
+          onClick={() => props.onAction(props.record.enabled === false ? 'enable' : 'disable', props.record)}
+          className="inline-flex items-center h-8 px-3 rounded-lg text-xs font-semibold border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+        >
+          {busyForRecord && props.state.action !== 'uninstall'
+            ? (props.state.action === 'enable' ? 'Enabling...' : 'Disabling...')
+            : (props.record.enabled === false ? 'Enable' : 'Disable')}
+        </button>
+      )}
+      {canUninstall && (
+        <button
+          disabled={props.state.isPending}
+          onClick={() => props.onAction('uninstall', props.record)}
+          className="inline-flex items-center h-8 px-3 rounded-lg text-xs font-semibold border border-rose-200 text-rose-600 bg-white hover:bg-rose-50 disabled:opacity-50"
+        >
+          {busyForRecord && props.state.action === 'uninstall' ? 'Uninstalling...' : 'Uninstall'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function FilterPanel(props: {
   searchText: string;
   typeFilter: FilterType;
@@ -331,8 +373,10 @@ function MarketplaceItemCard(props: {
   item: MarketplaceItemSummary;
   installedRecord?: MarketplaceInstalledRecord;
   installState: InstallState;
+  manageState: ManageState;
   installed: boolean;
   onInstall: (item: MarketplaceItemSummary) => void;
+  onManage: (action: MarketplaceManageAction, record: MarketplaceInstalledRecord) => void;
 }) {
   return (
     <article className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-sm transition-shadow">
@@ -359,18 +403,30 @@ function MarketplaceItemCard(props: {
 
       <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
         <code className="text-[11px] text-gray-500 bg-gray-100 rounded px-2 py-1 truncate">{props.item.install.spec}</code>
-        <InstallButton
-          item={props.item}
-          installed={props.installed}
-          installState={props.installState}
-          onInstall={props.onInstall}
-        />
+        {props.installed && props.installedRecord ? (
+          <RecordActionButtons
+            record={props.installedRecord}
+            state={props.manageState}
+            onAction={props.onManage}
+          />
+        ) : (
+          <InstallButton
+            item={props.item}
+            installed={props.installed}
+            installState={props.installState}
+            onInstall={props.onInstall}
+          />
+        )}
       </div>
     </article>
   );
 }
 
-function InstalledRecordCard(props: { record: MarketplaceInstalledRecord }) {
+function InstalledRecordCard(props: {
+  record: MarketplaceInstalledRecord;
+  manageState: ManageState;
+  onManage: (action: MarketplaceManageAction, record: MarketplaceInstalledRecord) => void;
+}) {
   const installedAt = props.record.installedAt ? new Date(props.record.installedAt).toLocaleString() : undefined;
   const sourceHint = props.record.source ? `source: ${props.record.source}` : undefined;
 
@@ -393,12 +449,11 @@ function InstalledRecordCard(props: { record: MarketplaceInstalledRecord }) {
 
       <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
         <code className="text-[11px] text-gray-500 bg-gray-100 rounded px-2 py-1 truncate" title={sourceHint}>{props.record.spec}</code>
-        <button
-          disabled
-          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold bg-gray-100 text-gray-500 cursor-not-allowed"
-        >
-          Installed
-        </button>
+        <RecordActionButtons
+          record={props.record}
+          state={props.manageState}
+          onAction={props.onManage}
+        />
       </div>
     </article>
   );
@@ -461,6 +516,7 @@ export function MarketplacePage() {
   });
   const recommendationsQuery = useMarketplaceRecommendations({ scene: 'default', limit: 4 });
   const installMutation = useInstallMarketplaceItem();
+  const manageMutation = useManageMarketplaceItem();
 
   const installedRecords = useMemo(
     () => installedQuery.data?.records ?? [],
@@ -545,6 +601,12 @@ export function MarketplacePage() {
     installingSpec: installMutation.variables?.spec
   };
 
+  const manageState: ManageState = {
+    isPending: manageMutation.isPending,
+    targetId: manageMutation.variables?.id || manageMutation.variables?.spec,
+    action: manageMutation.variables?.action
+  };
+
   const tabs = [
     { id: 'all', label: 'Marketplace' },
     { id: 'installed', label: 'Installed', count: installedQuery.data?.total ?? 0 }
@@ -554,7 +616,32 @@ export function MarketplacePage() {
     if (installMutation.isPending) {
       return;
     }
-    installMutation.mutate({ type: item.type, spec: item.install.spec });
+    installMutation.mutate({ type: item.type, spec: item.install.spec, kind: item.install.kind });
+  };
+
+  const handleManage = (action: MarketplaceManageAction, record: MarketplaceInstalledRecord) => {
+    if (manageMutation.isPending) {
+      return;
+    }
+
+    const targetId = record.id || record.spec;
+    if (!targetId) {
+      return;
+    }
+
+    if (action === 'uninstall') {
+      const confirmed = window.confirm(`Confirm ${action} ${targetId}?`);
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    manageMutation.mutate({
+      type: record.type,
+      action,
+      id: targetId,
+      spec: record.spec
+    });
   };
 
   return (
@@ -630,7 +717,9 @@ export function MarketplacePage() {
               installedRecord={findInstalledRecordForItem(item, installedRecordLookup)}
               installed={isInstalled(item, installedSets)}
               installState={installState}
+              manageState={manageState}
               onInstall={handleInstall}
+              onManage={handleManage}
             />
           ))}
 
@@ -643,10 +732,12 @@ export function MarketplacePage() {
                   installedRecord={entry.record}
                   installed
                   installState={installState}
+                  manageState={manageState}
                   onInstall={handleInstall}
+                  onManage={handleManage}
                 />
               )
-              : <InstalledRecordCard key={`local:${entry.key}`} record={entry.record} />
+              : <InstalledRecordCard key={`local:${entry.key}`} record={entry.record} manageState={manageState} onManage={handleManage} />
           ))}
         </div>
 

@@ -10,6 +10,7 @@ import {
   getWorkspacePath,
   HeartbeatService,
   LiteLLMProvider,
+  SkillsLoader,
   type LLMProvider,
   loadConfig,
   MessageBus,
@@ -27,8 +28,8 @@ import {
   stopPluginChannelGateways
 } from "@nextclaw/openclaw-compat";
 import { startUiServer } from "@nextclaw/server";
-import { closeSync, mkdirSync, openSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { closeSync, cpSync, existsSync, mkdirSync, openSync, rmSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import chokidar from "chokidar";
@@ -764,7 +765,11 @@ export class ServiceCommands {
         apiBaseUrl: process.env.NEXTCLAW_MARKETPLACE_API_BASE,
         installer: {
           installPlugin: (spec) => this.installMarketplacePlugin(spec),
-          installSkill: (params) => this.installMarketplaceSkill(params)
+          installSkill: (params) => this.installMarketplaceSkill(params),
+          enablePlugin: (id) => this.enableMarketplacePlugin(id),
+          disablePlugin: (id) => this.disableMarketplacePlugin(id),
+          uninstallPlugin: (id) => this.uninstallMarketplacePlugin(id),
+          uninstallSkill: (slug) => this.uninstallMarketplaceSkill(slug)
         }
       }
     });
@@ -787,10 +792,19 @@ export class ServiceCommands {
 
   private async installMarketplaceSkill(params: {
     slug: string;
+    kind?: "npm" | "clawhub" | "git" | "builtin";
     version?: string;
     registry?: string;
     force?: boolean;
   }): Promise<{ message: string; output?: string }> {
+    if (params.kind === "builtin") {
+      const result = this.installBuiltinMarketplaceSkill(params.slug, params.force);
+      if (!result) {
+        throw new Error(`Builtin skill not found: ${params.slug}`);
+      }
+      return result;
+    }
+
     const args = ["skills", "install", params.slug];
     if (params.version) {
       args.push("--version", params.version);
@@ -802,9 +816,78 @@ export class ServiceCommands {
       args.push("--force");
     }
 
-    const output = await this.runCliSubcommand(args);
-    const summary = this.pickLastOutputLine(output) ?? `Installed skill: ${params.slug}`;
+    try {
+      const output = await this.runCliSubcommand(args);
+      const summary = this.pickLastOutputLine(output) ?? `Installed skill: ${params.slug}`;
+      return { message: summary, output };
+    } catch (error) {
+      const fallback = this.installBuiltinMarketplaceSkill(params.slug, params.force);
+      if (!fallback) {
+        throw error;
+      }
+      return fallback;
+    }
+  }
+
+  private async enableMarketplacePlugin(id: string): Promise<{ message: string; output?: string }> {
+    const output = await this.runCliSubcommand(["plugins", "enable", id]);
+    const summary = this.pickLastOutputLine(output) ?? `Enabled plugin: ${id}`;
     return { message: summary, output };
+  }
+
+  private async disableMarketplacePlugin(id: string): Promise<{ message: string; output?: string }> {
+    const output = await this.runCliSubcommand(["plugins", "disable", id]);
+    const summary = this.pickLastOutputLine(output) ?? `Disabled plugin: ${id}`;
+    return { message: summary, output };
+  }
+
+  private async uninstallMarketplacePlugin(id: string): Promise<{ message: string; output?: string }> {
+    const output = await this.runCliSubcommand(["plugins", "uninstall", id, "--force"]);
+    const summary = this.pickLastOutputLine(output) ?? `Uninstalled plugin: ${id}`;
+    return { message: summary, output };
+  }
+
+  private async uninstallMarketplaceSkill(slug: string): Promise<{ message: string; output?: string }> {
+    const workspace = getWorkspacePath(loadConfig().agents.defaults.workspace);
+    const targetDir = join(workspace, "skills", slug);
+    if (!existsSync(targetDir)) {
+      throw new Error(`Skill not installed in workspace: ${slug}`);
+    }
+
+    rmSync(targetDir, { recursive: true, force: true });
+    return {
+      message: `Uninstalled skill: ${slug}`,
+      output: `Removed ${targetDir}`
+    };
+  }
+
+  private installBuiltinMarketplaceSkill(
+    slug: string,
+    force: boolean | undefined
+  ): { message: string; output?: string } | null {
+    const workspace = getWorkspacePath(loadConfig().agents.defaults.workspace);
+    const loader = new SkillsLoader(workspace);
+    const builtin = loader.listSkills(false).find((skill) => skill.name === slug && skill.source === "builtin");
+
+    if (!builtin) {
+      return null;
+    }
+
+    const destination = join(workspace, "skills", slug);
+    const destinationSkillFile = join(destination, "SKILL.md");
+    if (existsSync(destinationSkillFile) && !force) {
+      return {
+        message: `${slug} is already installed`,
+        output: destination
+      };
+    }
+
+    mkdirSync(join(workspace, "skills"), { recursive: true });
+    cpSync(dirname(builtin.path), destination, { recursive: true, force: true });
+    return {
+      message: `Installed skill: ${slug}`,
+      output: `Copied builtin skill to ${destination}`
+    };
   }
 
   private runCliSubcommand(args: string[], timeoutMs = 180_000): Promise<string> {

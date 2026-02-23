@@ -2,6 +2,8 @@ import { api } from './client';
 import type {
   MarketplaceInstallRequest,
   MarketplaceInstallResult,
+  MarketplaceManageRequest,
+  MarketplaceManageResult,
   MarketplaceInstalledView,
   MarketplaceItemType,
   MarketplaceItemView,
@@ -103,6 +105,14 @@ export async function installMarketplaceItem(request: MarketplaceInstallRequest)
 
 export async function fetchMarketplaceInstalled(): Promise<MarketplaceInstalledView> {
   const response = await api.get<MarketplaceInstalledView>('/api/marketplace/installed');
+  if (!response.ok) {
+    throw new Error(response.error.message);
+  }
+  return response.data;
+}
+
+export async function manageMarketplaceItem(request: MarketplaceManageRequest): Promise<MarketplaceManageResult> {
+  const response = await api.post<MarketplaceManageResult>('/api/marketplace/manage', request);
   if (!response.ok) {
     throw new Error(response.error.message);
   }

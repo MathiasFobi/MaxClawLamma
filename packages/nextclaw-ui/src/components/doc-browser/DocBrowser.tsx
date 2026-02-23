@@ -326,6 +326,7 @@ export function DocBrowser() {
                     href={currentUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    data-doc-external
                     className="flex items-center gap-1.5 text-xs text-primary hover:text-primary-hover font-medium transition-colors"
                 >
                     {t('docBrowserOpenExternal')}

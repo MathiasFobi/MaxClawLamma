@@ -76,10 +76,10 @@ export class BundledMarketplaceDataSource extends BaseMarketplaceDataSource {
     }
 
     const rawKind = this.readString(value.kind, `catalog.items[${index}].install.kind`);
-    if (!["npm", "clawhub", "git"].includes(rawKind)) {
+    if (!["npm", "clawhub", "git", "builtin"].includes(rawKind)) {
       throw new DomainValidationError(`catalog.items[${index}].install.kind is invalid`);
     }
-    const kind = rawKind as "npm" | "clawhub" | "git";
+    const kind = rawKind as "npm" | "clawhub" | "git" | "builtin";
 
     return {
       kind,

@@ -236,7 +236,7 @@ export type MarketplaceItemType = "plugin" | "skill";
 
 export type MarketplaceSort = "relevance" | "updated";
 
-export type MarketplaceInstallKind = "npm" | "clawhub" | "git";
+export type MarketplaceInstallKind = "npm" | "clawhub" | "git" | "builtin";
 
 export type MarketplaceInstallSpec = {
   kind: MarketplaceInstallKind;
@@ -304,6 +304,7 @@ export type MarketplaceInstalledView = {
 export type MarketplaceInstallRequest = {
   type: MarketplaceItemType;
   spec: string;
+  kind?: MarketplaceInstallKind;
   version?: string;
   registry?: string;
   force?: boolean;
@@ -318,14 +319,36 @@ export type MarketplaceInstallResult = {
 
 export type MarketplaceInstallSkillParams = {
   slug: string;
+  kind?: MarketplaceInstallKind;
   version?: string;
   registry?: string;
   force?: boolean;
 };
 
+export type MarketplaceManageAction = "enable" | "disable" | "uninstall";
+
+export type MarketplaceManageRequest = {
+  type: MarketplaceItemType;
+  action: MarketplaceManageAction;
+  id?: string;
+  spec?: string;
+};
+
+export type MarketplaceManageResult = {
+  type: MarketplaceItemType;
+  action: MarketplaceManageAction;
+  id: string;
+  message: string;
+  output?: string;
+};
+
 export type MarketplaceInstaller = {
   installPlugin?: (spec: string) => Promise<{ message: string; output?: string }>;
   installSkill?: (params: MarketplaceInstallSkillParams) => Promise<{ message: string; output?: string }>;
+  enablePlugin?: (id: string) => Promise<{ message: string; output?: string }>;
+  disablePlugin?: (id: string) => Promise<{ message: string; output?: string }>;
+  uninstallPlugin?: (id: string) => Promise<{ message: string; output?: string }>;
+  uninstallSkill?: (slug: string) => Promise<{ message: string; output?: string }>;
 };
 
 export type MarketplaceApiConfig = {
