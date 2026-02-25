@@ -6,5 +6,6 @@
 - `/new-rule`: 创建新规则条目的指令，必须按 Rulebook 模板写全字段并更新 `AGENTS.md` 规则区。
 - `/commit`: 进行提交操作（提交信息需使用英文）。
 - `/validate`: 对项目进行验证，至少运行 `build`、`lint`、`tsc`，必要时补充冒烟测试。执行前需确认验证范围和可跳过项。
+- `/release-frontend`: 前端一键发布（仅 UI 变更场景）。输入：`/release-frontend`。输出：生成 UI changeset，并执行 `pnpm release:version` + `pnpm release:publish`，最终发布 `@nextclaw/ui` 与 `nextclaw`。
 
 （后续指令在此追加，保持格式一致。） 

@@ -28,3 +28,12 @@ pnpm release:publish
 Notes:
 - `release:publish` should run `release:check` (build + lint + typecheck) before publishing.
 - `release:publish` should create git tags automatically.
+
+## UI-only shortcut
+
+If only the frontend UI changed, use the one-command shortcut. It will create a changeset for
+`@nextclaw/ui` + `nextclaw`, then run the standard version + publish steps.
+
+```bash
+pnpm release:frontend
+```

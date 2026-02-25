@@ -25,6 +25,7 @@
     "release:check": "pnpm build && pnpm lint && pnpm tsc",
     "release:version": "pnpm changeset version",
     "release:publish": "pnpm release:check && pnpm changeset publish && pnpm changeset tag",
+    "release:frontend": "node scripts/release-frontend.mjs && pnpm release:version && pnpm release:publish",
     "release": "pnpm changeset && pnpm release:version && pnpm release:publish",
     "deploy:pages": "pnpm --filter @nextclaw/landing build && pnpm dlx wrangler pages deploy apps/landing/dist --project-name nextclaw-landing --branch master",
     "deploy:docs": "pnpm --filter @nextclaw/docs build && pnpm dlx wrangler pages deploy apps/docs/.vitepress/dist --project-name nextclaw-docs --branch master",

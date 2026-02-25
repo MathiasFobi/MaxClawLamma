@@ -22,6 +22,7 @@
   - `/new-rule`：创建新规则条目（按 Rulebook 模板）
   - `/commit`：进行提交操作（提交信息需使用英文）
   - `/validate`：运行项目验证，至少包含 `build`、`lint`、`tsc`，必要时冒烟测试
+  - `/release-frontend`：前端一键发布（仅 UI 变更场景）
 
 ## 规则/Rule 机制
 

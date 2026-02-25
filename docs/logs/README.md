@@ -2,6 +2,7 @@
 
 - [docs/logs/2026-02-23-discord-streaming-preview/v0.8.15-discord-streaming-preview/README.md](docs/logs/2026-02-23-discord-streaming-preview/v0.8.15-discord-streaming-preview/README.md)
 - [docs/logs/2026-02-23-frontend-ui-refresh/v0.8.15-frontend-ui-refresh/README.md](docs/logs/2026-02-23-frontend-ui-refresh/v0.8.15-frontend-ui-refresh/README.md)
+- [docs/logs/2026-02-25-frontend-release-command/v0.8.16-frontend-release-command/README.md](docs/logs/2026-02-25-frontend-release-command/v0.8.16-frontend-release-command/README.md)
 - [docs/logs/2026-02-23-discord-slash-commands/v0.8.14-discord-slash-timeout-fix/README.md](docs/logs/2026-02-23-discord-slash-commands/v0.8.14-discord-slash-timeout-fix/README.md)
 - [docs/logs/2026-02-23-discord-slash-commands/v0.6.32-discord-slash-commands/README.md](docs/logs/2026-02-23-discord-slash-commands/v0.6.32-discord-slash-commands/README.md)
 - [docs/logs/2026-02-23-cron-ui/v0.8.14-cron-ui/README.md](docs/logs/2026-02-23-cron-ui/v0.8.14-cron-ui/README.md)
