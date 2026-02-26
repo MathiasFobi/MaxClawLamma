@@ -10,9 +10,6 @@ type FeatureItem = {
 };
 
 type LandingCopy = {
-  htmlLang: string;
-  metaTitle: string;
-  metaDescription: string;
   navFeatures: string;
   navDocs: string;
   heroTitleLine1: string;
@@ -34,12 +31,26 @@ type LandingCopy = {
   footerNpm: string;
   terminalHeader: string;
   terminalStarted: string;
-  languageLabel: string;
-  languageOptions: Record<Locale, string>;
   copiedText: string;
 };
 
+declare global {
+  interface Window {
+    __NEXTCLAW_LOCALE__?: string;
+  }
+}
+
 const LOCALE_STORAGE_KEY = 'nextclaw.landing.locale';
+
+const ROUTES: Record<Locale, string> = {
+  en: '/en/',
+  zh: '/zh/'
+};
+
+const LOCALE_OPTIONS: Array<{ value: Locale; label: string }> = [
+  { value: 'en', label: 'English' },
+  { value: 'zh', label: '简体中文' }
+];
 
 const LINKS: Record<'github' | 'npm', string> & { docs: Record<Locale, string> } = {
   github: 'https://github.com/Peiiii/nextclaw',
@@ -52,14 +63,10 @@ const LINKS: Record<'github' | 'npm', string> & { docs: Record<Locale, string> }
 
 const COPY: Record<Locale, LandingCopy> = {
   en: {
-    htmlLang: 'en',
-    metaTitle: 'NextClaw - Effortlessly Simple Personal AI Assistant',
-    metaDescription:
-      'Feature-rich, OpenClaw-compatible personal AI gateway. Multi-provider, multi-channel capabilities with an elegant zero-config interface.',
     navFeatures: 'Features',
     navDocs: 'Docs',
     heroTitleLine1: 'The effortlessly simple',
-    heroTitleLine2: 'Personal AI Assistant.',
+    heroTitleLine2: 'Personal AI Assistant',
     heroDescription:
       'Feature-rich, OpenClaw-compatible gateway. Multi-provider, multi-channel capabilities with an elegant zero-config interface.',
     copyTitle: 'Copy commands',
@@ -111,22 +118,13 @@ const COPY: Record<Locale, LandingCopy> = {
     footerNpm: 'NPM',
     terminalHeader: 'nextclaw - bash',
     terminalStarted: 'NextClaw started',
-    languageLabel: 'Language',
-    languageOptions: {
-      en: 'English',
-      zh: '简体中文'
-    },
     copiedText: 'Copied'
   },
   zh: {
-    htmlLang: 'zh-CN',
-    metaTitle: 'NextClaw - 轻量易用的个人 AI 助手',
-    metaDescription:
-      '功能完整、兼容 OpenClaw 的个人 AI 网关。支持多 Provider、多渠道，并提供零配置体验。',
     navFeatures: '功能',
     navDocs: '文档',
     heroTitleLine1: '轻量易用的',
-    heroTitleLine2: '个人 AI 助手。',
+    heroTitleLine2: '个人 AI 助手',
     heroDescription: '功能完整、兼容 OpenClaw 的 AI 网关。多 Provider、多渠道，一套界面完成配置。',
     copyTitle: '复制命令',
     docsButton: '查看文档',
@@ -175,100 +173,63 @@ const COPY: Record<Locale, LandingCopy> = {
     footerNpm: 'NPM',
     terminalHeader: 'nextclaw - bash',
     terminalStarted: 'NextClaw 已启动',
-    languageLabel: '语言',
-    languageOptions: {
-      en: 'English',
-      zh: '简体中文'
-    },
     copiedText: '已复制'
   }
 };
 
-class LandingI18nApp {
-  private locale: Locale;
+function isLocale(value: string | null | undefined): value is Locale {
+  return value === 'en' || value === 'zh';
+}
+
+function readSavedLocale(): Locale | null {
+  try {
+    const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
+    return isLocale(saved) ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistLocale(locale: Locale): void {
+  try {
+    localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+  } catch {
+    // ignore persistence failures
+  }
+}
+
+function resolvePageLocale(): Locale {
+  if (isLocale(window.__NEXTCLAW_LOCALE__)) {
+    return window.__NEXTCLAW_LOCALE__;
+  }
+
+  const pathLocale = window.location.pathname.split('/')[1];
+  if (isLocale(pathLocale)) {
+    return pathLocale;
+  }
+
+  const saved = readSavedLocale();
+  if (saved) {
+    return saved;
+  }
+
+  const browserLang = (navigator.languages && navigator.languages[0]) || navigator.language || '';
+  return /^zh\b/i.test(browserLang) ? 'zh' : 'en';
+}
+
+class LandingPage {
   private readonly root: HTMLDivElement;
+  private readonly locale: Locale;
+  private readonly copy: LandingCopy;
 
-  constructor() {
-    const root = document.querySelector<HTMLDivElement>('#app');
-    if (!root) {
-      throw new Error('Missing #app mount element');
-    }
+  constructor(root: HTMLDivElement, locale: Locale) {
     this.root = root;
-    this.locale = this.resolveInitialLocale();
-  }
-
-  start(): void {
-    this.render();
-  }
-
-  private resolveInitialLocale(): Locale {
-    const saved = this.readSavedLocale();
-    if (saved) {
-      return saved;
-    }
-
-    const browserLang = (navigator.languages && navigator.languages[0]) || navigator.language || '';
-    return /^zh\b/i.test(browserLang) ? 'zh' : 'en';
-  }
-
-  private readSavedLocale(): Locale | null {
-    try {
-      const value = localStorage.getItem(LOCALE_STORAGE_KEY);
-      return value === 'en' || value === 'zh' ? value : null;
-    } catch {
-      return null;
-    }
-  }
-
-  private persistLocale(locale: Locale): void {
-    try {
-      localStorage.setItem(LOCALE_STORAGE_KEY, locale);
-    } catch {
-      // ignore persistence failures in restricted environments
-    }
-  }
-
-  private setLocale(locale: Locale): void {
-    if (this.locale === locale) {
-      return;
-    }
     this.locale = locale;
-    this.persistLocale(locale);
-    this.render();
+    this.copy = COPY[locale];
   }
 
-  private docsHome(locale: Locale): string {
-    return LINKS.docs[locale];
-  }
-
-  private updateMeta(copy: LandingCopy): void {
-    document.documentElement.lang = copy.htmlLang;
-    document.title = copy.metaTitle;
-    const description = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-    if (description) {
-      description.content = copy.metaDescription;
-    }
-    const ogTitle = document.querySelector<HTMLMetaElement>('meta[property="og:title"]');
-    if (ogTitle) {
-      ogTitle.content = copy.metaTitle;
-    }
-    const ogDescription = document.querySelector<HTMLMetaElement>('meta[property="og:description"]');
-    if (ogDescription) {
-      ogDescription.content = copy.metaDescription;
-    }
-    const twitterTitle = document.querySelector<HTMLMetaElement>('meta[name="twitter:title"]');
-    if (twitterTitle) {
-      twitterTitle.content = copy.metaTitle;
-    }
-    const twitterDescription = document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]');
-    if (twitterDescription) {
-      twitterDescription.content = copy.metaDescription;
-    }
-  }
-
-  private render(): void {
-    const copy = COPY[this.locale];
-    const docsLink = this.docsHome(this.locale);
+  render(): void {
+    const docsLink = LINKS.docs[this.locale];
 
     this.root.innerHTML = `
       <div class="relative min-h-screen flex flex-col bg-gradient-radial overflow-hidden">
@@ -281,20 +242,20 @@ class LandingI18nApp {
               <span class="font-semibold text-lg tracking-tight">NextClaw</span>
             </div>
             <nav class="hidden md:flex gap-8 text-sm font-medium">
-              <a href="#features" class="text-muted-foreground hover:text-foreground transition-colors">${copy.navFeatures}</a>
-              <a href="${docsLink}" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors">${copy.navDocs}</a>
+              <a href="#features" class="text-muted-foreground hover:text-foreground transition-colors">${this.copy.navFeatures}</a>
+              <a href="${docsLink}" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors">${this.copy.navDocs}</a>
             </nav>
             <div class="flex items-center gap-2">
-              <label for="locale-select" class="sr-only">${copy.languageLabel}</label>
-              <div class="relative">
-                <i data-lucide="languages" class="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+              <div class="relative flex items-center text-sm">
+                <i data-lucide="languages" class="w-4 h-4 text-muted-foreground absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none"></i>
                 <select
                   id="locale-select"
-                  class="h-9 rounded-full bg-secondary text-foreground text-sm pl-8 pr-8 border border-border focus:outline-none focus:ring-2 focus:ring-primary/30 appearance-none"
+                  class="h-8 pl-6 pr-4 bg-transparent border-0 text-muted-foreground hover:text-foreground transition-colors focus:outline-none appearance-none cursor-pointer"
+                  aria-label="Select language"
                 >
-                  <option value="en" ${this.locale === 'en' ? 'selected' : ''}>${copy.languageOptions.en}</option>
-                  <option value="zh" ${this.locale === 'zh' ? 'selected' : ''}>${copy.languageOptions.zh}</option>
+                  ${LOCALE_OPTIONS.map((option) => `<option value="${option.value}" ${option.value === this.locale ? 'selected' : ''}>${option.label}</option>`).join('')}
                 </select>
+                <i data-lucide="chevron-down" class="w-3 h-3 text-muted-foreground absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none"></i>
               </div>
               <a href="${LINKS.github}" target="_blank" rel="noopener noreferrer" class="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-secondary" aria-label="GitHub">
                 <i data-lucide="github" class="w-5 h-5"></i>
@@ -305,11 +266,11 @@ class LandingI18nApp {
 
         <main class="flex-1 flex flex-col items-center justify-center text-center px-6 pt-32 pb-20 z-10">
           <h1 class="text-5xl md:text-7xl font-bold tracking-tight text-gradient max-w-4xl mb-6 animate-slide-up opacity-0" style="animation-delay: 0.2s">
-            ${copy.heroTitleLine1}<br />${copy.heroTitleLine2}
+            ${this.copy.heroTitleLine1}<br />${this.copy.heroTitleLine2}
           </h1>
 
           <p class="text-lg md:text-xl text-muted-foreground max-w-2xl mb-10 animate-slide-up opacity-0" style="animation-delay: 0.3s">
-            ${copy.heroDescription}
+            ${this.copy.heroDescription}
           </p>
 
           <div class="w-full max-w-2xl mx-auto mb-10 text-left animate-slide-up opacity-0" style="animation-delay: 0.4s">
@@ -320,8 +281,8 @@ class LandingI18nApp {
                   <div class="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
                   <div class="w-3 h-3 rounded-full bg-[#27c93f]"></div>
                 </div>
-                <div class="text-xs text-[#a0938a] font-mono">${copy.terminalHeader}</div>
-                <button id="copy-btn" class="text-[#a0938a] hover:text-white transition-colors" title="${copy.copyTitle}">
+                <div class="text-xs text-[#a0938a] font-mono">${this.copy.terminalHeader}</div>
+                <button id="copy-btn" class="text-[#a0938a] hover:text-white transition-colors" title="${this.copy.copyTitle}">
                   <i data-lucide="copy" class="w-4 h-4"></i>
                 </button>
               </div>
@@ -338,11 +299,11 @@ class LandingI18nApp {
           <div class="flex flex-col sm:flex-row justify-center gap-4 mb-20 animate-slide-up opacity-0" style="animation-delay: 0.5s">
             <a href="${docsLink}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 h-14 px-8 rounded-full font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all hover:scale-105 shadow-xl shadow-primary/25 focus:ring-2 focus:ring-primary focus:outline-none text-lg">
               <i data-lucide="book-open" class="w-5 h-5"></i>
-              ${copy.docsButton}
+              ${this.copy.docsButton}
             </a>
             <a href="${LINKS.github}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 h-14 px-8 rounded-full font-medium bg-foreground text-background hover:bg-foreground/90 transition-all hover:scale-105 shadow-sm focus:ring-2 focus:ring-foreground focus:outline-none text-lg">
               <i data-lucide="github" class="w-5 h-5"></i>
-              ${copy.githubButton}
+              ${this.copy.githubButton}
             </a>
           </div>
 
@@ -355,7 +316,7 @@ class LandingI18nApp {
                   <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
                   <div class="w-3 h-3 rounded-full bg-green-400"></div>
                 </div>
-                <img src="/nextclaw-ui.png" alt="${copy.screenshotAlt}" class="w-full h-auto object-cover border-t border-border/40" />
+                <img src="/nextclaw-ui.png" alt="${this.copy.screenshotAlt}" class="w-full h-auto object-cover border-t border-border/40" />
               </div>
             </div>
           </div>
@@ -363,12 +324,11 @@ class LandingI18nApp {
 
         <section id="features" class="relative py-24 px-6 z-10 w-full max-w-7xl mx-auto">
           <div class="text-center mb-16 animate-slide-up opacity-0 relative" style="animation-delay: 0.1s">
-            <h2 class="text-3xl md:text-5xl font-bold tracking-tight mb-4">${copy.featuresTitle}</h2>
-            <p class="text-muted-foreground text-lg max-w-2xl mx-auto">${copy.featuresSubtitle}</p>
+            <h2 class="text-3xl md:text-5xl font-bold tracking-tight mb-4">${this.copy.featuresTitle}</h2>
+            <p class="text-muted-foreground text-lg max-w-2xl mx-auto">${this.copy.featuresSubtitle}</p>
           </div>
-
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            ${copy.features
+            ${this.copy.features
               .map(
                 (feature, index) => `
               <div class="glass-card p-8 rounded-2xl hover:-translate-y-1 transition-transform duration-300 animate-slide-up opacity-0" style="animation-delay: ${0.2 + index * 0.1}s">
@@ -377,8 +337,7 @@ class LandingI18nApp {
                 </div>
                 <h3 class="text-xl font-semibold mb-2">${feature.title}</h3>
                 <p class="text-muted-foreground leading-relaxed">${feature.description}</p>
-              </div>
-            `
+              </div>`
               )
               .join('')}
           </div>
@@ -388,10 +347,10 @@ class LandingI18nApp {
           <div class="glass-card rounded-[2rem] p-12 relative overflow-hidden">
             <div class="absolute inset-0 bg-primary/5"></div>
             <div class="relative z-10">
-              <h2 class="text-3xl md:text-5xl font-bold mb-6">${copy.ctaTitle}</h2>
-              <p class="text-lg text-muted-foreground mb-10 max-w-xl mx-auto">${copy.ctaDescription}</p>
+              <h2 class="text-3xl md:text-5xl font-bold mb-6">${this.copy.ctaTitle}</h2>
+              <p class="text-lg text-muted-foreground mb-10 max-w-xl mx-auto">${this.copy.ctaDescription}</p>
               <a href="${docsLink}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 h-14 px-8 rounded-full font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-transform hover:scale-105 shadow-xl shadow-primary/20 focus:ring-2 focus:ring-primary focus:outline-none text-lg">
-                ${copy.ctaButton}
+                ${this.copy.ctaButton}
                 <i data-lucide="arrow-right" class="w-5 h-5 ml-1"></i>
               </a>
             </div>
@@ -402,15 +361,13 @@ class LandingI18nApp {
           <div class="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
             <div class="flex items-center gap-2 opacity-80">
               <div class="w-6 h-6 rounded bg-foreground flex items-center justify-center text-background font-bold text-xs">N</div>
-              <span class="font-medium text-sm">${copy.footerProject}</span>
+              <span class="font-medium text-sm">${this.copy.footerProject}</span>
             </div>
-            <div class="text-sm text-muted-foreground">
-              ${copy.footerLicense}
-            </div>
+            <div class="text-sm text-muted-foreground">${this.copy.footerLicense}</div>
             <div class="flex gap-4">
-              <a href="${docsLink}" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors">${copy.footerDocs}</a>
+              <a href="${docsLink}" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors">${this.copy.footerDocs}</a>
               <a href="${LINKS.github}" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors">GitHub</a>
-              <a href="${LINKS.npm}" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors">${copy.footerNpm}</a>
+              <a href="${LINKS.npm}" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors">${this.copy.footerNpm}</a>
             </div>
           </div>
         </footer>
@@ -422,31 +379,28 @@ class LandingI18nApp {
       </div>
     `;
 
-    this.updateMeta(copy);
-    this.initializeInteractions(copy);
+    this.bindLocaleSelect();
+    this.bindCopyAction();
+    this.runTerminalAnimation();
     createIcons({ icons, nameAttr: 'data-lucide' });
   }
 
-  private initializeInteractions(copy: LandingCopy): void {
-    this.bindLocaleSwitcher();
-    this.bindCopyAction(copy);
-    this.runTerminalAnimation(copy);
-  }
-
-  private bindLocaleSwitcher(): void {
+  private bindLocaleSelect(): void {
     const select = document.querySelector<HTMLSelectElement>('#locale-select');
     if (!select) {
       return;
     }
-    select.addEventListener('change', (event) => {
-      const value = (event.target as HTMLSelectElement).value;
-      if (value === 'en' || value === 'zh') {
-        this.setLocale(value);
+    select.addEventListener('change', () => {
+      const next = select.value;
+      if (!isLocale(next) || next === this.locale) {
+        return;
       }
+      persistLocale(next);
+      window.location.href = ROUTES[next];
     });
   }
 
-  private bindCopyAction(copy: LandingCopy): void {
+  private bindCopyAction(): void {
     const copyBtn = document.querySelector<HTMLButtonElement>('#copy-btn');
     if (!copyBtn) {
       return;
@@ -455,7 +409,7 @@ class LandingI18nApp {
       try {
         await navigator.clipboard.writeText('npm install -g nextclaw && nextclaw start');
         const original = copyBtn.innerHTML;
-        copyBtn.innerHTML = `<span class="text-xs">${copy.copiedText}</span>`;
+        copyBtn.innerHTML = `<span class="text-xs">${this.copy.copiedText}</span>`;
         setTimeout(() => {
           copyBtn.innerHTML = original;
           createIcons({ icons, nameAttr: 'data-lucide' });
@@ -466,7 +420,7 @@ class LandingI18nApp {
     });
   }
 
-  private runTerminalAnimation(copy: LandingCopy): void {
+  private runTerminalAnimation(): void {
     const terminalContent = document.querySelector<HTMLElement>('#terminal-content');
     const installCmd = document.querySelector<HTMLElement>('#install-cmd');
     if (!terminalContent || !installCmd) {
@@ -475,7 +429,7 @@ class LandingI18nApp {
 
     const startupSequence: Array<{ text: string; icon?: string; color?: string; isCommand?: boolean }> = [
       { text: 'nextclaw start', isCommand: true },
-      { text: copy.terminalStarted, icon: '✓', color: '#8eb079' },
+      { text: this.copy.terminalStarted, icon: '✓', color: '#8eb079' },
       { text: 'UI:  http://127.0.0.1:18791', icon: '→', color: '#7eb6d4' },
       { text: 'API: http://127.0.0.1:18791/api', icon: '→', color: '#7eb6d4' }
     ];
@@ -538,4 +492,11 @@ class LandingI18nApp {
   }
 }
 
-new LandingI18nApp().start();
+const root = document.querySelector<HTMLDivElement>('#app');
+if (!root) {
+  throw new Error('Missing #app mount element');
+}
+
+const locale = resolvePageLocale();
+persistLocale(locale);
+new LandingPage(root, locale).render();

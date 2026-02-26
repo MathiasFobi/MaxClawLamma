@@ -1,5 +1,6 @@
 # Logs
 
+- [docs/logs/2026-02-26-landing-i18n/v0.0.1-landing-i18n/README.md](docs/logs/2026-02-26-landing-i18n/v0.0.1-landing-i18n/README.md)
 - [docs/logs/2026-02-26-docs-nav-ia-adjust/v0.0.1-docs-nav-ia-adjust/README.md](docs/logs/2026-02-26-docs-nav-ia-adjust/v0.0.1-docs-nav-ia-adjust/README.md)
 - [docs/logs/2026-02-26-docs-root-locale-redirect/v0.0.1-docs-root-locale-redirect/README.md](docs/logs/2026-02-26-docs-root-locale-redirect/v0.0.1-docs-root-locale-redirect/README.md)
 - [docs/logs/2026-02-26-docs-language-nav-dedup/v0.0.1-docs-language-nav-dedup/README.md](docs/logs/2026-02-26-docs-language-nav-dedup/v0.0.1-docs-language-nav-dedup/README.md)

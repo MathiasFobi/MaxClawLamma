@@ -10,8 +10,10 @@ NextClaw is an OpenClaw-compatible personal AI gateway with a web UI.
 It supports multi-provider model routing, multi-channel delivery, and local-first operation.
 
 Recommended entry points:
-- Product overview: https://nextclaw.io/
-- Getting started and guides: https://docs.nextclaw.io/
+- Landing (English): https://nextclaw.io/en/
+- Landing (Simplified Chinese): https://nextclaw.io/zh/
+- Docs (English): https://docs.nextclaw.io/en/
+- Docs (Simplified Chinese): https://docs.nextclaw.io/zh/
 - Roadmap: https://docs.nextclaw.io/en/guide/roadmap
 - Configuration guide: https://docs.nextclaw.io/en/guide/configuration
 - Multi-agent architecture: https://docs.nextclaw.io/en/guide/multi-agent
