@@ -2,20 +2,72 @@ import { defineConfig } from 'vitepress'
 
 const routeSyncScript = `
   (function() {
+    var LOCALE_KEY = 'nextclaw.docs.locale';
+
+    function readSavedLocale() {
+      try {
+        var saved = localStorage.getItem(LOCALE_KEY);
+        return saved === 'en' || saved === 'zh' ? saved : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function detectBrowserLocale() {
+      var lang = '';
+      try {
+        lang = (navigator.languages && navigator.languages[0]) || navigator.language || '';
+      } catch (_) {}
+      return /^zh\\b/i.test(lang) ? 'zh' : 'en';
+    }
+
+    function resolvePreferredLocale() {
+      return readSavedLocale() || detectBrowserLocale();
+    }
+
+    function persistLocaleFromPath() {
+      var match = location.pathname.match(/^\\/(en|zh)(\\/|$)/);
+      if (!match) {
+        return;
+      }
+      try {
+        localStorage.setItem(LOCALE_KEY, match[1]);
+      } catch (_) {}
+    }
+
+    function redirectRootByLocale() {
+      if (location.pathname !== '/' && location.pathname !== '') {
+        return false;
+      }
+      var target = '/' + resolvePreferredLocale() + '/' + location.search + location.hash;
+      location.replace(target);
+      return true;
+    }
+
     function notify() {
       if (window.parent !== window) {
         window.parent.postMessage({ type: 'docs-route-change', url: location.href }, '*');
       }
     }
+
+    if (redirectRootByLocale()) {
+      return;
+    }
+
+    persistLocaleFromPath();
     notify();
     var lastUrl = location.href;
     new MutationObserver(function() {
       if (location.href !== lastUrl) {
         lastUrl = location.href;
+        persistLocaleFromPath();
         notify();
       }
     }).observe(document, { subtree: true, childList: true });
-    window.addEventListener('popstate', notify);
+    window.addEventListener('popstate', function() {
+      persistLocaleFromPath();
+      notify();
+    });
     window.addEventListener('message', function(e) {
       if (e.data && e.data.type === 'docs-navigate' && typeof e.data.path === 'string') {
         var a = document.createElement('a');
@@ -99,7 +151,7 @@ export default defineConfig({
   ],
   themeConfig: {
     logo: '/logo.svg',
-    nav: [{ text: 'GitHub', link: 'https://github.com/Peiiii/nextclaw' }],
+    nav: [],
     sidebar: {},
     socialLinks: [{ icon: 'github', link: 'https://github.com/Peiiii/nextclaw' }],
     search: { provider: 'local' },
@@ -118,10 +170,11 @@ export default defineConfig({
       description: 'Effortlessly Simple Personal AI Assistant — Documentation',
       themeConfig: {
         nav: [
-          { text: 'Guide', link: '/en/guide/getting-started' },
-          { text: 'Roadmap', link: '/en/guide/roadmap' },
+          { text: 'Getting Started', link: '/en/guide/getting-started' },
+          { text: 'Configuration', link: '/en/guide/configuration' },
           { text: 'Channels', link: '/en/guide/channels' },
-          { text: 'GitHub', link: 'https://github.com/Peiiii/nextclaw' }
+          { text: 'Commands', link: '/en/guide/commands' },
+          { text: 'Roadmap', link: '/en/guide/roadmap' },
         ],
         sidebar: {
           '/en/guide/': enSidebar
@@ -141,10 +194,11 @@ export default defineConfig({
       description: '轻量、易用、兼容 OpenClaw 的个人 AI 助手文档',
       themeConfig: {
         nav: [
-          { text: '指南', link: '/zh/guide/getting-started' },
-          { text: '路线图', link: '/zh/guide/roadmap' },
+          { text: '快速开始', link: '/zh/guide/getting-started' },
+          { text: '配置', link: '/zh/guide/configuration' },
           { text: '渠道', link: '/zh/guide/channels' },
-          { text: 'GitHub', link: 'https://github.com/Peiiii/nextclaw' }
+          { text: '命令', link: '/zh/guide/commands' },
+          { text: '路线图', link: '/zh/guide/roadmap' },
         ],
         sidebar: {
           '/zh/guide/': zhSidebar
