@@ -45,7 +45,8 @@ function AppContent() {
             <Route path="/runtime" element={<LazyRoute><RuntimeConfigPage /></LazyRoute>} />
             <Route path="/sessions" element={<LazyRoute><SessionsConfigPage /></LazyRoute>} />
             <Route path="/cron" element={<LazyRoute><CronConfigPage /></LazyRoute>} />
-            <Route path="/marketplace" element={<LazyRoute><MarketplacePage /></LazyRoute>} />
+            <Route path="/marketplace" element={<Navigate to="/marketplace/plugins" replace />} />
+            <Route path="/marketplace/:type" element={<LazyRoute><MarketplacePage /></LazyRoute>} />
             <Route path="/" element={<Navigate to="/model" replace />} />
             <Route path="*" element={<Navigate to="/model" replace />} />
           </Routes>

@@ -1,5 +1,6 @@
 # Logs
 
+- [docs/logs/2026-02-26-marketplace-skill-plugin-separation/v0.0.1-marketplace-skill-plugin-separation/README.md](docs/logs/2026-02-26-marketplace-skill-plugin-separation/v0.0.1-marketplace-skill-plugin-separation/README.md)
 - [docs/logs/2026-02-26-ui-lazy-chunking/v0.0.1-ui-lazy-chunking/README.md](docs/logs/2026-02-26-ui-lazy-chunking/v0.0.1-ui-lazy-chunking/README.md)
 - [docs/logs/2026-02-26-landing-i18n/v0.0.1-landing-i18n/README.md](docs/logs/2026-02-26-landing-i18n/v0.0.1-landing-i18n/README.md)
 - [docs/logs/2026-02-26-docs-nav-ia-adjust/v0.0.1-docs-nav-ia-adjust/README.md](docs/logs/2026-02-26-docs-nav-ia-adjust/v0.0.1-docs-nav-ia-adjust/README.md)

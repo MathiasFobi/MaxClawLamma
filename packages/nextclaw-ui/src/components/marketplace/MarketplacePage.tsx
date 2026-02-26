@@ -1,5 +1,11 @@
 /* eslint-disable max-lines-per-function */
-import type { MarketplaceInstalledRecord, MarketplaceItemSummary, MarketplaceManageAction, MarketplaceSort } from '@/api/types';
+import type {
+  MarketplaceInstalledRecord,
+  MarketplaceItemSummary,
+  MarketplaceManageAction,
+  MarketplaceSort,
+  MarketplaceItemType
+} from '@/api/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs } from '@/components/ui/tabs-custom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -15,10 +21,10 @@ import { PageLayout, PageHeader } from '@/components/layout/page-layout';
 import { cn } from '@/lib/utils';
 import { PackageSearch } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
 const PAGE_SIZE = 12;
 
-type FilterType = 'all' | 'plugin' | 'skill';
 type ScopeType = 'all' | 'installed';
 
 type InstallState = {
@@ -37,6 +43,8 @@ type InstalledRenderEntry = {
   record: MarketplaceInstalledRecord;
   item?: MarketplaceItemSummary;
 };
+
+type MarketplaceRouteType = 'plugins' | 'skills';
 
 function normalizeMarketplaceKey(value: string | undefined): string {
   return (value ?? '').trim().toLowerCase();
@@ -168,10 +176,8 @@ function ItemIcon({ name, fallback }: { name?: string; fallback: string }) {
 function FilterPanel(props: {
   scope: ScopeType;
   searchText: string;
-  typeFilter: FilterType;
   sort: MarketplaceSort;
   onSearchTextChange: (value: string) => void;
-  onTypeFilterChange: (value: FilterType) => void;
   onSortChange: (value: MarketplaceSort) => void;
 }) {
   return (
@@ -185,28 +191,6 @@ function FilterPanel(props: {
             placeholder={t('marketplaceSearchPlaceholder')}
             className="w-full h-9 border border-gray-200/80 rounded-xl pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
           />
-        </div>
-
-        <div className="inline-flex h-9 rounded-xl bg-gray-100/80 p-1 shrink-0">
-          {([
-            { value: 'all', label: t('marketplaceFilterAll') },
-            { value: 'plugin', label: t('marketplaceFilterPlugins') },
-            { value: 'skill', label: t('marketplaceFilterSkills') },
-          ] as const).map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => props.onTypeFilterChange(opt.value)}
-              className={cn(
-                'px-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
-                props.typeFilter === opt.value
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
         </div>
 
         {props.scope === 'all' && (
@@ -367,10 +351,27 @@ function PaginationBar(props: {
 }
 
 export function MarketplacePage() {
+  const navigate = useNavigate();
+  const params = useParams<{ type?: string }>();
+
+  const routeType: MarketplaceRouteType | null = useMemo(() => {
+    if (params.type === 'plugins' || params.type === 'skills') {
+      return params.type;
+    }
+    return null;
+  }, [params.type]);
+
+  useEffect(() => {
+    if (!routeType) {
+      navigate('/marketplace/plugins', { replace: true });
+    }
+  }, [routeType, navigate]);
+
+  const typeFilter: MarketplaceItemType = routeType === 'skills' ? 'skill' : 'plugin';
+
   const [searchText, setSearchText] = useState('');
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState<ScopeType>('all');
-  const [typeFilter, setTypeFilter] = useState<FilterType>('all');
   const [sort, setSort] = useState<MarketplaceSort>('relevance');
   const [page, setPage] = useState(1);
 
@@ -382,11 +383,15 @@ export function MarketplacePage() {
     return () => clearTimeout(timer);
   }, [searchText]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [typeFilter]);
+
   const installedQuery = useMarketplaceInstalled();
 
   const itemsQuery = useMarketplaceItems({
     q: query || undefined,
-    type: typeFilter === 'all' ? undefined : typeFilter,
+    type: typeFilter,
     sort,
     page,
     pageSize: PAGE_SIZE
@@ -418,7 +423,7 @@ export function MarketplacePage() {
 
   const installedEntries = useMemo<InstalledRenderEntry[]>(() => {
     const entries = installedRecords
-      .filter((record) => (typeFilter === 'all' ? true : record.type === typeFilter))
+      .filter((record) => record.type === typeFilter)
       .map((record) => ({
         key: `${record.type}:${record.spec}:${record.id ?? ''}`,
         record,
@@ -471,9 +476,13 @@ export function MarketplacePage() {
     action: manageMutation.variables?.action
   };
 
-  const tabs = [
+  const scopeTabs = [
     { id: 'all', label: t('marketplaceTabMarketplace') },
     { id: 'installed', label: t('marketplaceTabInstalled'), count: installedQuery.data?.total ?? 0 }
+  ];
+  const typeTabs = [
+    { id: 'plugins', label: t('marketplaceFilterPlugins') },
+    { id: 'skills', label: t('marketplaceFilterSkills') }
   ];
 
   const handleInstall = (item: MarketplaceItemSummary) => {
@@ -518,7 +527,19 @@ export function MarketplacePage() {
       <PageHeader title={t('marketplacePageTitle')} description={t('marketplacePageDescription')} />
 
       <Tabs
-        tabs={tabs}
+        tabs={typeTabs}
+        activeTab={routeType ?? 'plugins'}
+        onChange={(value) => {
+          const routeValue = value === 'skills' ? 'skills' : 'plugins';
+          if (routeType === routeValue) {
+            return;
+          }
+          navigate(`/marketplace/${routeValue}`);
+        }}
+        className="mb-4"
+      />
+      <Tabs
+        tabs={scopeTabs}
         activeTab={scope}
         onChange={(value) => {
           setScope(value as ScopeType);
@@ -530,13 +551,8 @@ export function MarketplacePage() {
       <FilterPanel
         scope={scope}
         searchText={searchText}
-        typeFilter={typeFilter}
         sort={sort}
         onSearchTextChange={setSearchText}
-        onTypeFilterChange={(value) => {
-          setPage(1);
-          setTypeFilter(value);
-        }}
         onSortChange={(value) => {
           setPage(1);
           setSort(value);
@@ -545,7 +561,11 @@ export function MarketplacePage() {
 
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-[14px] font-semibold text-gray-900">{scope === 'installed' ? t('marketplaceSectionInstalled') : t('marketplaceSectionExtensions')}</h3>
+          <h3 className="text-[14px] font-semibold text-gray-900">
+            {scope === 'installed' ? t('marketplaceSectionInstalled') : t('marketplaceSectionExtensions')}
+            {' · '}
+            {typeFilter === 'plugin' ? t('marketplaceFilterPlugins') : t('marketplaceFilterSkills')}
+          </h3>
           <span className="text-[12px] text-gray-500">{listSummary}</span>
         </div>
 
