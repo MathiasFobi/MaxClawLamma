@@ -35,8 +35,10 @@ pnpm -C workers/marketplace-api tsc
 
 ### GitHub Actions 自动同步（推荐）
 
-- 数据源固定为仓库文件：`workers/marketplace-api/data/catalog.json`
-- 当 `catalog.json` 或 `workers/marketplace-api` 相关代码变更并合入 `master/main` 后，
+- 数据源固定为仓库文件：
+  - `workers/marketplace-api/data/plugins-catalog.json`
+  - `workers/marketplace-api/data/skills-catalog.json`
+- 当上述 catalog 文件或 `workers/marketplace-api` 相关代码变更并合入 `master/main` 后，
   `Marketplace Catalog Sync` workflow 会自动执行：
   - catalog 校验
   - build/lint/tsc
@@ -63,6 +65,8 @@ pnpm -C workers/marketplace-api run deploy
 
 ## 数据来源
 
-- 当前数据文件：`workers/marketplace-api/data/catalog.json`
-- 数据结构：`catalog.plugins` 与 `catalog.skills` 两个独立分区（各自包含 `items` 与 `recommendations`）
+- 当前数据文件：
+  - `workers/marketplace-api/data/plugins-catalog.json`
+  - `workers/marketplace-api/data/skills-catalog.json`
+- 数据结构：插件与技能分别使用独立 catalog（各自包含 `items` 与 `recommendations`）
 - 当前模式：数据随 Worker 代码一起发布（GitHub Actions 自动同步，手动部署兜底）

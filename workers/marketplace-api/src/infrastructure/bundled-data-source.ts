@@ -1,4 +1,5 @@
-import catalog from "../../data/catalog.json";
+import pluginsCatalog from "../../data/plugins-catalog.json";
+import skillsCatalog from "../../data/skills-catalog.json";
 import { DomainValidationError } from "../domain/errors";
 import type {
   MarketplaceCatalogSection,
@@ -11,39 +12,50 @@ import type {
 import { BaseMarketplaceDataSource } from "./data-source";
 
 type RawRecord = Record<string, unknown>;
+type SplitCatalogSnapshot = {
+  version: string;
+  generatedAt: string;
+  section: MarketplaceCatalogSection;
+};
 
 export class BundledMarketplaceDataSource extends BaseMarketplaceDataSource {
   async loadSnapshot(): Promise<MarketplaceCatalogSnapshot> {
-    return this.parseCatalog(catalog as unknown);
+    const plugins = this.parseSplitCatalog(pluginsCatalog as unknown, "plugins-catalog", "plugin");
+    const skills = this.parseSplitCatalog(skillsCatalog as unknown, "skills-catalog", "skill");
+
+    return {
+      version: this.buildVersion(plugins.version, skills.version),
+      generatedAt: this.pickLatestGeneratedAt(plugins.generatedAt, skills.generatedAt),
+      plugins: plugins.section,
+      skills: skills.section
+    };
   }
 
-  private parseCatalog(raw: unknown): MarketplaceCatalogSnapshot {
+  private parseSplitCatalog(
+    raw: unknown,
+    name: "plugins-catalog" | "skills-catalog",
+    expectedType: MarketplaceItemType
+  ): SplitCatalogSnapshot {
     if (!this.isRawRecord(raw)) {
-      throw new DomainValidationError("catalog root must be an object");
+      throw new DomainValidationError(`${name} root must be an object`);
     }
 
-    const version = this.readString(raw.version, "catalog.version");
-    const generatedAt = this.readString(raw.generatedAt, "catalog.generatedAt");
-    const plugins = this.parseSection(raw.plugins, "catalog.plugins", "plugin");
-    const skills = this.parseSection(raw.skills, "catalog.skills", "skill");
+    const version = this.readString(raw.version, `${name}.version`);
+    const generatedAt = this.readDateTime(raw.generatedAt, `${name}.generatedAt`);
+    const section = this.parseSection(raw, name, expectedType);
 
     return {
       version,
       generatedAt,
-      plugins,
-      skills
+      section
     };
   }
 
   private parseSection(
-    value: unknown,
+    value: RawRecord,
     path: string,
     expectedType: MarketplaceItemType
   ): MarketplaceCatalogSection {
-    if (!this.isRawRecord(value)) {
-      throw new DomainValidationError(`${path} must be an object`);
-    }
-
     const items = this.parseItems(value.items, `${path}.items`, expectedType);
     const itemIds = new Set(items.map((item) => item.id));
     const recommendations = this.parseRecommendations(value.recommendations, `${path}.recommendations`, itemIds);
@@ -96,12 +108,7 @@ export class BundledMarketplaceDataSource extends BaseMarketplaceDataSource {
     }
 
     const rawKind = this.readString(value.kind, `${path}.kind`);
-    if (![
-      "npm",
-      "clawhub",
-      "git",
-      "builtin"
-    ].includes(rawKind)) {
+    if (!["npm", "clawhub", "git", "builtin"].includes(rawKind)) {
       throw new DomainValidationError(`${path}.kind is invalid`);
     }
     const kind = rawKind as "npm" | "clawhub" | "git" | "builtin";
@@ -142,6 +149,29 @@ export class BundledMarketplaceDataSource extends BaseMarketplaceDataSource {
 
       return recommendation;
     });
+  }
+
+  private buildVersion(pluginVersion: string, skillVersion: string): string {
+    if (pluginVersion === skillVersion) {
+      return pluginVersion;
+    }
+
+    return `plugins@${pluginVersion}|skills@${skillVersion}`;
+  }
+
+  private pickLatestGeneratedAt(pluginGeneratedAt: string, skillGeneratedAt: string): string {
+    const pluginTs = Date.parse(pluginGeneratedAt);
+    const skillTs = Date.parse(skillGeneratedAt);
+
+    return pluginTs >= skillTs ? pluginGeneratedAt : skillGeneratedAt;
+  }
+
+  private readDateTime(value: unknown, path: string): string {
+    const text = this.readString(value, path);
+    if (Number.isNaN(Date.parse(text))) {
+      throw new DomainValidationError(`${path} must be a valid datetime string`);
+    }
+    return text;
   }
 
   private readString(value: unknown, path: string): string {

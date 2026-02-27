@@ -13,6 +13,14 @@ function expectNonEmptyString(value, path) {
   return value.trim();
 }
 
+function expectDateTime(value, path) {
+  const text = expectNonEmptyString(value, path);
+  if (Number.isNaN(Date.parse(text))) {
+    fail(`${path} must be a valid datetime string`);
+  }
+  return text;
+}
+
 function expectStringArray(value, path) {
   if (!Array.isArray(value)) {
     fail(`${path} must be an array`);
@@ -27,40 +35,46 @@ function expectObject(value, path) {
   return value;
 }
 
-const scriptDir = dirname(fileURLToPath(import.meta.url));
-const catalogPath = resolve(scriptDir, "../data/catalog.json");
-const raw = readFileSync(catalogPath, "utf8");
-const catalog = JSON.parse(raw);
-
-expectObject(catalog, "catalog");
-
-const version = expectNonEmptyString(catalog.version, "catalog.version");
-const generatedAt = expectNonEmptyString(catalog.generatedAt, "catalog.generatedAt");
-if (Number.isNaN(Date.parse(generatedAt))) {
-  fail("catalog.generatedAt must be a valid datetime string");
+function readJson(filePath, label) {
+  const raw = readFileSync(filePath, "utf8");
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    fail(`${label} is not valid JSON: ${String(error)}`);
+  }
 }
+
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const pluginsCatalogPath = resolve(scriptDir, "../data/plugins-catalog.json");
+const skillsCatalogPath = resolve(scriptDir, "../data/skills-catalog.json");
+
+const pluginsCatalog = readJson(pluginsCatalogPath, "plugins-catalog.json");
+const skillsCatalog = readJson(skillsCatalogPath, "skills-catalog.json");
 
 const supportedKinds = new Set(["npm", "clawhub", "git", "builtin"]);
 const seenGlobalIds = new Set();
 const seenGlobalSlugs = new Set();
 const seenGlobalSpecs = new Set();
 
-function validateSection(sectionName, expectedType) {
-  const section = expectObject(catalog[sectionName], `catalog.${sectionName}`);
+function validateCatalog(catalog, label, expectedType) {
+  const root = expectObject(catalog, label);
 
-  if (!Array.isArray(section.items)) {
-    fail(`catalog.${sectionName}.items must be an array`);
+  const version = expectNonEmptyString(root.version, `${label}.version`);
+  const generatedAt = expectDateTime(root.generatedAt, `${label}.generatedAt`);
+
+  if (!Array.isArray(root.items)) {
+    fail(`${label}.items must be an array`);
   }
-  if (!Array.isArray(section.recommendations)) {
-    fail(`catalog.${sectionName}.recommendations must be an array`);
+  if (!Array.isArray(root.recommendations)) {
+    fail(`${label}.recommendations must be an array`);
   }
 
   const sectionItemIds = new Set();
   const sectionRecommendationIds = new Set();
 
-  for (let index = 0; index < section.items.length; index += 1) {
-    const item = section.items[index];
-    const path = `catalog.${sectionName}.items[${index}]`;
+  for (let index = 0; index < root.items.length; index += 1) {
+    const item = root.items[index];
+    const path = `${label}.items[${index}]`;
     expectObject(item, path);
 
     const id = expectNonEmptyString(item.id, `${path}.id`);
@@ -74,8 +88,8 @@ function validateSection(sectionName, expectedType) {
     expectNonEmptyString(item.summary, `${path}.summary`);
     expectStringArray(item.tags, `${path}.tags`);
     expectNonEmptyString(item.author, `${path}.author`);
-    expectNonEmptyString(item.publishedAt, `${path}.publishedAt`);
-    expectNonEmptyString(item.updatedAt, `${path}.updatedAt`);
+    expectDateTime(item.publishedAt, `${path}.publishedAt`);
+    expectDateTime(item.updatedAt, `${path}.updatedAt`);
 
     if (seenGlobalIds.has(id)) {
       fail(`${path}.id duplicates with ${id}`);
@@ -104,9 +118,9 @@ function validateSection(sectionName, expectedType) {
     seenGlobalSpecs.add(specKey);
   }
 
-  for (let index = 0; index < section.recommendations.length; index += 1) {
-    const recommendation = section.recommendations[index];
-    const path = `catalog.${sectionName}.recommendations[${index}]`;
+  for (let index = 0; index < root.recommendations.length; index += 1) {
+    const recommendation = root.recommendations[index];
+    const path = `${label}.recommendations[${index}]`;
     expectObject(recommendation, path);
 
     const recommendationId = expectNonEmptyString(recommendation.id, `${path}.id`);
@@ -125,14 +139,16 @@ function validateSection(sectionName, expectedType) {
   }
 
   return {
-    items: section.items.length,
-    recommendations: section.recommendations.length
+    version,
+    generatedAt,
+    items: root.items.length,
+    recommendations: root.recommendations.length
   };
 }
 
-const pluginStats = validateSection("plugins", "plugin");
-const skillStats = validateSection("skills", "skill");
+const pluginStats = validateCatalog(pluginsCatalog, "plugins-catalog", "plugin");
+const skillStats = validateCatalog(skillsCatalog, "skills-catalog", "skill");
 
 console.log(
-  `catalog validation passed: version=${version}, plugins=${pluginStats.items}/${pluginStats.recommendations}, skills=${skillStats.items}/${skillStats.recommendations}`
+  `catalog validation passed: plugins=${pluginStats.version}/${pluginStats.items}/${pluginStats.recommendations}, skills=${skillStats.version}/${skillStats.items}/${skillStats.recommendations}`
 );

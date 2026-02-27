@@ -3,13 +3,12 @@ import type {
   MarketplaceCatalogSnapshot,
   MarketplaceItem,
   MarketplaceItemSummary,
-  MarketplaceItemType,
   MarketplaceListQuery,
   MarketplaceListResult,
   MarketplaceRecommendationResult,
   MarketplaceSort
 } from "../domain/model";
-import type { MarketplaceDataSource, MarketplaceRepository } from "../domain/repository";
+import type { MarketplaceDataSource } from "../domain/repository";
 
 type CacheEntry = {
   snapshot: MarketplaceCatalogSnapshot;
@@ -25,20 +24,23 @@ type RepositoryOptions = {
   cacheTtlMs?: number;
 };
 
-export class InMemoryMarketplaceRepository implements MarketplaceRepository {
+export abstract class InMemorySectionRepositoryBase {
   private cache?: CacheEntry;
   private readonly cacheTtlMs: number;
 
-  constructor(
+  protected constructor(
     private readonly dataSource: MarketplaceDataSource,
     options: RepositoryOptions = {}
   ) {
     this.cacheTtlMs = options.cacheTtlMs ?? 120_000;
   }
 
-  async listItems(type: MarketplaceItemType, query: MarketplaceListQuery): Promise<MarketplaceListResult> {
+  protected abstract getSection(snapshot: MarketplaceCatalogSnapshot): MarketplaceCatalogSection;
+  protected abstract getResultType(): "plugin" | "skill";
+
+  async listItems(query: MarketplaceListQuery): Promise<MarketplaceListResult> {
     const snapshot = await this.loadSnapshot();
-    const section = this.selectSection(snapshot, type);
+    const section = this.getSection(snapshot);
     const filtered = this.filterItems(section.items, query);
     const sorted = this.sortItems(filtered, query.sort, query.q);
 
@@ -58,21 +60,20 @@ export class InMemoryMarketplaceRepository implements MarketplaceRepository {
     };
   }
 
-  async getItemBySlug(type: MarketplaceItemType, slug: string): Promise<MarketplaceItem | null> {
+  async getItemBySlug(slug: string): Promise<MarketplaceItem | null> {
     const snapshot = await this.loadSnapshot();
-    const section = this.selectSection(snapshot, type);
+    const section = this.getSection(snapshot);
     const item = section.items.find((entry) => entry.slug === slug);
 
     return item ?? null;
   }
 
   async listRecommendations(
-    type: MarketplaceItemType,
     sceneId: string | undefined,
     limit: number
   ): Promise<MarketplaceRecommendationResult> {
     const snapshot = await this.loadSnapshot();
-    const section = this.selectSection(snapshot, type);
+    const section = this.getSection(snapshot);
     const selectedScene = this.selectScene(section, sceneId);
     const selectedItems = selectedScene.itemIds
       .map((itemId) => section.items.find((entry) => entry.id === itemId))
@@ -81,7 +82,7 @@ export class InMemoryMarketplaceRepository implements MarketplaceRepository {
       .map((entry) => this.toSummary(entry));
 
     return {
-      type,
+      type: this.getResultType(),
       sceneId: selectedScene.id,
       title: selectedScene.title,
       description: selectedScene.description,
@@ -197,10 +198,6 @@ export class InMemoryMarketplaceRepository implements MarketplaceRepository {
     }
 
     return rightTs - leftTs;
-  }
-
-  private selectSection(snapshot: MarketplaceCatalogSnapshot, type: MarketplaceItemType): MarketplaceCatalogSection {
-    return type === "plugin" ? snapshot.plugins : snapshot.skills;
   }
 
   private selectScene(section: MarketplaceCatalogSection, sceneId?: string) {

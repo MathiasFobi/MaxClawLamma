@@ -1,0 +1,307 @@
+{
+  "version": "2026.02.27",
+  "generatedAt": "2026-02-27T16:14:00.000Z",
+  "items": [
+    {
+      "id": "skill-weather",
+      "slug": "weather",
+      "type": "skill",
+      "name": "Weather",
+      "summary": "Builtin NextClaw skill for weather lookup workflows.",
+      "description": "Provides quick weather investigation workflow in NextClaw.",
+      "tags": [
+        "skill",
+        "builtin",
+        "weather"
+      ],
+      "author": "NextClaw",
+      "sourceRepo": "https://github.com/nextclaw/nextclaw",
+      "homepage": "https://github.com/nextclaw/nextclaw",
+      "install": {
+        "kind": "builtin",
+        "spec": "weather",
+        "command": "nextclaw skills install weather"
+      },
+      "publishedAt": "2025-07-10T10:00:00.000Z",
+      "updatedAt": "2026-02-16T09:10:00.000Z"
+    },
+    {
+      "id": "skill-summarize",
+      "slug": "summarize",
+      "type": "skill",
+      "name": "Summarize",
+      "summary": "Builtin NextClaw skill for structured summarization.",
+      "description": "Provides summarization workflow for files and long texts in NextClaw.",
+      "tags": [
+        "skill",
+        "builtin",
+        "summary"
+      ],
+      "author": "NextClaw",
+      "sourceRepo": "https://github.com/nextclaw/nextclaw",
+      "homepage": "https://github.com/nextclaw/nextclaw",
+      "install": {
+        "kind": "builtin",
+        "spec": "summarize",
+        "command": "nextclaw skills install summarize"
+      },
+      "publishedAt": "2025-07-01T10:00:00.000Z",
+      "updatedAt": "2026-02-15T07:30:00.000Z"
+    },
+    {
+      "id": "skill-github",
+      "slug": "github",
+      "type": "skill",
+      "name": "GitHub",
+      "summary": "Builtin NextClaw skill for GitHub-oriented workflows.",
+      "description": "Provides issue, PR and repository workflow guidance in NextClaw.",
+      "tags": [
+        "skill",
+        "builtin",
+        "github"
+      ],
+      "author": "NextClaw",
+      "sourceRepo": "https://github.com/nextclaw/nextclaw",
+      "homepage": "https://github.com/nextclaw/nextclaw",
+      "install": {
+        "kind": "builtin",
+        "spec": "github",
+        "command": "nextclaw skills install github"
+      },
+      "publishedAt": "2025-06-20T10:00:00.000Z",
+      "updatedAt": "2026-02-14T07:15:00.000Z"
+    },
+    {
+      "id": "skill-tmux",
+      "slug": "tmux",
+      "type": "skill",
+      "name": "Tmux",
+      "summary": "Builtin NextClaw skill for terminal/tmux collaboration workflows.",
+      "description": "Provides tmux-based task execution workflow guidance in NextClaw.",
+      "tags": [
+        "skill",
+        "builtin",
+        "terminal"
+      ],
+      "author": "NextClaw",
+      "sourceRepo": "https://github.com/nextclaw/nextclaw",
+      "homepage": "https://github.com/nextclaw/nextclaw",
+      "install": {
+        "kind": "builtin",
+        "spec": "tmux",
+        "command": "nextclaw skills install tmux"
+      },
+      "publishedAt": "2025-06-10T10:00:00.000Z",
+      "updatedAt": "2026-02-13T11:40:00.000Z"
+    },
+    {
+      "id": "skill-gog",
+      "slug": "gog",
+      "type": "skill",
+      "name": "GoG",
+      "summary": "Builtin NextClaw skill for graph-oriented generation workflows.",
+      "description": "Provides graph and planning oriented workflow guidance in NextClaw.",
+      "tags": [
+        "skill",
+        "builtin",
+        "workflow"
+      ],
+      "author": "NextClaw",
+      "sourceRepo": "https://github.com/nextclaw/nextclaw",
+      "homepage": "https://github.com/nextclaw/nextclaw",
+      "install": {
+        "kind": "builtin",
+        "spec": "gog",
+        "command": "nextclaw skills install gog"
+      },
+      "publishedAt": "2025-06-01T10:00:00.000Z",
+      "updatedAt": "2026-02-12T11:00:00.000Z"
+    },
+    {
+      "id": "skill-pdf-anthropic",
+      "slug": "pdf",
+      "type": "skill",
+      "name": "PDF Toolkit",
+      "summary": "Anthropic skill for PDF read/merge/split/OCR workflows.",
+      "description": "Use this skill for reading, extracting, combining, splitting, rotating, and OCR processing for PDF files.",
+      "tags": [
+        "skill",
+        "git",
+        "document",
+        "pdf"
+      ],
+      "author": "Anthropic",
+      "sourceRepo": "https://github.com/anthropics/skills",
+      "homepage": "https://github.com/anthropics/skills/tree/main/skills/pdf",
+      "install": {
+        "kind": "git",
+        "spec": "anthropics/skills/skills/pdf",
+        "command": "npx skild install anthropics/skills/skills/pdf --target agents --local --skill pdf"
+      },
+      "publishedAt": "2025-06-01T10:00:00.000Z",
+      "updatedAt": "2026-02-27T23:05:50.000Z"
+    },
+    {
+      "id": "skill-docx-anthropic",
+      "slug": "docx",
+      "type": "skill",
+      "name": "DOCX Toolkit",
+      "summary": "Anthropic skill for creating and editing Word documents.",
+      "description": "Use this skill for creating, reading, editing, and restructuring .docx documents.",
+      "tags": [
+        "skill",
+        "git",
+        "document",
+        "docx"
+      ],
+      "author": "Anthropic",
+      "sourceRepo": "https://github.com/anthropics/skills",
+      "homepage": "https://github.com/anthropics/skills/tree/main/skills/docx",
+      "install": {
+        "kind": "git",
+        "spec": "anthropics/skills/skills/docx",
+        "command": "npx skild install anthropics/skills/skills/docx --target agents --local --skill docx"
+      },
+      "publishedAt": "2025-06-01T10:00:00.000Z",
+      "updatedAt": "2026-02-27T23:05:50.000Z"
+    },
+    {
+      "id": "skill-pptx-anthropic",
+      "slug": "pptx",
+      "type": "skill",
+      "name": "PPTX Toolkit",
+      "summary": "Anthropic skill for presentation deck operations.",
+      "description": "Use this skill for creating, parsing, editing, and reorganizing .pptx presentations.",
+      "tags": [
+        "skill",
+        "git",
+        "document",
+        "pptx"
+      ],
+      "author": "Anthropic",
+      "sourceRepo": "https://github.com/anthropics/skills",
+      "homepage": "https://github.com/anthropics/skills/tree/main/skills/pptx",
+      "install": {
+        "kind": "git",
+        "spec": "anthropics/skills/skills/pptx",
+        "command": "npx skild install anthropics/skills/skills/pptx --target agents --local --skill pptx"
+      },
+      "publishedAt": "2025-06-01T10:00:00.000Z",
+      "updatedAt": "2026-02-27T23:05:50.000Z"
+    },
+    {
+      "id": "skill-xlsx-anthropic",
+      "slug": "xlsx",
+      "type": "skill",
+      "name": "XLSX Toolkit",
+      "summary": "Anthropic skill for spreadsheet-oriented document workflows.",
+      "description": "Use this skill for opening, editing, cleaning, and converting spreadsheet files such as .xlsx and .csv.",
+      "tags": [
+        "skill",
+        "git",
+        "document",
+        "xlsx"
+      ],
+      "author": "Anthropic",
+      "sourceRepo": "https://github.com/anthropics/skills",
+      "homepage": "https://github.com/anthropics/skills/tree/main/skills/xlsx",
+      "install": {
+        "kind": "git",
+        "spec": "anthropics/skills/skills/xlsx",
+        "command": "npx skild install anthropics/skills/skills/xlsx --target agents --local --skill xlsx"
+      },
+      "publishedAt": "2025-06-01T10:00:00.000Z",
+      "updatedAt": "2026-02-27T23:05:50.000Z"
+    },
+    {
+      "id": "skill-bird-openclaw",
+      "slug": "bird",
+      "type": "skill",
+      "name": "bird",
+      "summary": "OpenClaw community skill for X/Twitter read/search/post workflows.",
+      "description": "Use bird CLI to read threads, search posts, and draft tweets/replies in agent workflows.",
+      "tags": [
+        "skill",
+        "git",
+        "social",
+        "x",
+        "twitter"
+      ],
+      "author": "iqbalnaveliano",
+      "sourceRepo": "https://github.com/openclaw/skills",
+      "homepage": "https://github.com/openclaw/skills/blob/main/skills/iqbalnaveliano/bird-su/SKILL.md",
+      "install": {
+        "kind": "git",
+        "spec": "openclaw/skills/skills/iqbalnaveliano/bird-su",
+        "command": "npx skild install openclaw/skills/skills/iqbalnaveliano/bird-su --target agents --local --skill bird"
+      },
+      "publishedAt": "2026-02-05T13:02:45.000Z",
+      "updatedAt": "2026-02-05T13:02:45.000Z"
+    },
+    {
+      "id": "skill-cloudflare-deploy-openai",
+      "slug": "cloudflare-deploy",
+      "type": "skill",
+      "name": "Cloudflare Deploy",
+      "summary": "OpenAI curated skill for deploying apps and infra on Cloudflare.",
+      "description": "Use this skill to select Cloudflare products and deploy Workers, Pages, and related services.",
+      "tags": [
+        "skill",
+        "git",
+        "cloudflare",
+        "deploy"
+      ],
+      "author": "OpenAI",
+      "sourceRepo": "https://github.com/openai/skills",
+      "homepage": "https://github.com/openai/skills/tree/main/skills/.curated/cloudflare-deploy",
+      "install": {
+        "kind": "git",
+        "spec": "openai/skills/skills/.curated/cloudflare-deploy",
+        "command": "npx skild install openai/skills/skills/.curated/cloudflare-deploy --target agents --local --skill cloudflare-deploy"
+      },
+      "publishedAt": "2026-02-27T16:14:00.000Z",
+      "updatedAt": "2026-02-27T16:14:00.000Z"
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "default",
+      "title": "Default Picks",
+      "description": "Reliable plugins and skills for most NextClaw setups.",
+      "itemIds": [
+        "skill-weather",
+        "skill-summarize"
+      ]
+    },
+    {
+      "id": "workflow",
+      "title": "Workflow Skills",
+      "description": "Useful builtin skills for daily delivery.",
+      "itemIds": [
+        "skill-weather",
+        "skill-github",
+        "skill-tmux",
+        "skill-gog"
+      ]
+    },
+    {
+      "id": "documents",
+      "title": "Document Processing",
+      "description": "Recommended skills for processing PDF, Word, PPT, and spreadsheet files.",
+      "itemIds": [
+        "skill-pdf-anthropic",
+        "skill-docx-anthropic",
+        "skill-pptx-anthropic",
+        "skill-xlsx-anthropic"
+      ]
+    },
+    {
+      "id": "cloudflare",
+      "title": "Cloudflare Mastery",
+      "description": "Recommended skill for Cloudflare deployment and platform architecture tasks.",
+      "itemIds": [
+        "skill-cloudflare-deploy-openai"
+      ]
+    }
+  ]
+}

@@ -4,7 +4,7 @@
 
 ## 部署原则
 
-- `workers/marketplace-api/data/catalog.json` 作为 GitHub 单一数据源（source of truth）。
+- `workers/marketplace-api/data/plugins-catalog.json` 与 `workers/marketplace-api/data/skills-catalog.json` 作为 GitHub 数据源（source of truth）。
 - 默认通过 GitHub Actions 自动同步到线上 Worker。
 - 手动部署作为兜底流程（Actions 异常或紧急修复时使用）。
 
@@ -15,7 +15,8 @@ workflow：`.github/workflows/marketplace-catalog-sync.yml`
 触发条件：
 
 - `master/main` 分支 push 且涉及：
-  - `workers/marketplace-api/data/catalog.json`
+  - `workers/marketplace-api/data/plugins-catalog.json`
+  - `workers/marketplace-api/data/skills-catalog.json`
   - `workers/marketplace-api/src/**`
   - `workers/marketplace-api/wrangler.toml`
   - `workers/marketplace-api/package.json`
@@ -59,9 +60,11 @@ pnpm -C workers/marketplace-api run deploy
 
 ```bash
 curl -sS https://marketplace-api.nextclaw.io/health
-curl -sS 'https://marketplace-api.nextclaw.io/api/v1/items?page=1&pageSize=5'
+curl -sS 'https://marketplace-api.nextclaw.io/api/v1/plugins/items?page=1&pageSize=5'
+curl -sS 'https://marketplace-api.nextclaw.io/api/v1/skills/items?page=1&pageSize=5'
 ```
 
 预期：
 - `/health` 返回 `ok: true`
-- `/api/v1/items` 返回 `ok: true` 且 `data.items` 非空
+- `/api/v1/plugins/items` 返回 `ok: true` 且 `data.items` 非空
+- `/api/v1/skills/items` 返回 `ok: true` 且 `data.items` 非空

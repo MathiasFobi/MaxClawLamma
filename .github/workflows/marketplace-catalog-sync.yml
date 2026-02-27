@@ -3,7 +3,8 @@ name: Marketplace Catalog Sync
 on:
   pull_request:
     paths:
-      - "workers/marketplace-api/data/catalog.json"
+      - "workers/marketplace-api/data/plugins-catalog.json"
+      - "workers/marketplace-api/data/skills-catalog.json"
       - "workers/marketplace-api/src/**"
       - "workers/marketplace-api/wrangler.toml"
       - "workers/marketplace-api/package.json"
@@ -14,7 +15,8 @@ on:
       - master
       - main
     paths:
-      - "workers/marketplace-api/data/catalog.json"
+      - "workers/marketplace-api/data/plugins-catalog.json"
+      - "workers/marketplace-api/data/skills-catalog.json"
       - "workers/marketplace-api/src/**"
       - "workers/marketplace-api/wrangler.toml"
       - "workers/marketplace-api/package.json"
