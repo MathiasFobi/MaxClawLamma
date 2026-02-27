@@ -1,5 +1,14 @@
 # @nextclaw/openclaw-compat
 
+## 0.1.28
+
+### Patch Changes
+
+- Add a built-in `nextclaw-skill-resource-hub` skill to curate NextClaw-first skill ecosystem resources, including OpenClaw and community sources.
+- Updated dependencies
+  - @nextclaw/core@0.6.34
+  - @nextclaw/channel-runtime@0.1.20
+
 ## 0.1.27
 
 ### Patch Changes

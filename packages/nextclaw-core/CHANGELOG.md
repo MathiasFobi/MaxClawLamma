@@ -1,5 +1,11 @@
 # nextclaw-core
 
+## 0.6.34
+
+### Patch Changes
+
+- Add a built-in `nextclaw-skill-resource-hub` skill to curate NextClaw-first skill ecosystem resources, including OpenClaw and community sources.
+
 ## 0.6.33
 
 ### Patch Changes
