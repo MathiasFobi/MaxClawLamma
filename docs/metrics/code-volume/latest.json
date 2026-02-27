@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-02-26T03:12:59.100Z",
+  "generatedAt": "2026-02-27T03:11:14.547Z",
   "projectRoot": "/home/runner/work/nextclaw/nextclaw",
   "git": {
-    "sha": "702de329af3ce40e739f9a846496912f7d080b14",
+    "sha": "70804ac812e689369aad513381e3a7d0c7158564",
     "ref": "master"
   },
   "scope": {
@@ -36,36 +36,36 @@
     ]
   },
   "totals": {
-    "files": 237,
-    "totalLines": 35519,
-    "blankLines": 3867,
-    "commentLines": 254,
-    "codeLines": 31398
+    "files": 240,
+    "totalLines": 36501,
+    "blankLines": 3978,
+    "commentLines": 249,
+    "codeLines": 32274
   },
   "byLanguage": [
     {
       "name": "TypeScript",
-      "files": 165,
-      "totalLines": 28550,
-      "blankLines": 3141,
-      "commentLines": 174,
-      "codeLines": 25235
+      "files": 166,
+      "totalLines": 29260,
+      "blankLines": 3207,
+      "commentLines": 169,
+      "codeLines": 25884
     },
     {
       "name": "TSX",
-      "files": 41,
-      "totalLines": 5139,
-      "blankLines": 492,
+      "files": 42,
+      "totalLines": 5325,
+      "blankLines": 519,
       "commentLines": 63,
-      "codeLines": 4584
+      "codeLines": 4743
     },
     {
       "name": "MJS",
-      "files": 9,
-      "totalLines": 994,
-      "blankLines": 133,
+      "files": 10,
+      "totalLines": 1080,
+      "blankLines": 151,
       "commentLines": 0,
-      "codeLines": 861
+      "codeLines": 929
     },
     {
       "name": "JavaScript",
@@ -103,11 +103,11 @@
     },
     {
       "name": "packages/nextclaw-ui",
-      "files": 61,
-      "totalLines": 7258,
-      "blankLines": 738,
-      "commentLines": 123,
-      "codeLines": 6397
+      "files": 63,
+      "totalLines": 7559,
+      "blankLines": 781,
+      "commentLines": 125,
+      "codeLines": 6653
     },
     {
       "name": "packages/nextclaw",
@@ -136,34 +136,34 @@
     {
       "name": "packages/nextclaw-server",
       "files": 7,
-      "totalLines": 2462,
-      "blankLines": 274,
+      "totalLines": 2640,
+      "blankLines": 296,
       "commentLines": 0,
-      "codeLines": 2188
+      "codeLines": 2344
     },
     {
       "name": "workers/marketplace-api",
       "files": 16,
-      "totalLines": 948,
-      "blankLines": 155,
+      "totalLines": 998,
+      "blankLines": 162,
       "commentLines": 0,
-      "codeLines": 793
+      "codeLines": 836
     },
     {
       "name": "scripts",
-      "files": 4,
-      "totalLines": 780,
-      "blankLines": 97,
+      "files": 5,
+      "totalLines": 847,
+      "blankLines": 110,
       "commentLines": 0,
-      "codeLines": 683
+      "codeLines": 737
     },
     {
       "name": "apps/landing",
       "files": 4,
-      "totalLines": 314,
-      "blankLines": 25,
-      "commentLines": 4,
-      "codeLines": 285
+      "totalLines": 591,
+      "blankLines": 48,
+      "commentLines": 2,
+      "codeLines": 541
     },
     {
       "name": "bridge",
@@ -176,15 +176,15 @@
     {
       "name": "apps/docs",
       "files": 1,
-      "totalLines": 106,
-      "blankLines": 10,
-      "commentLines": 5,
-      "codeLines": 91
+      "totalLines": 215,
+      "blankLines": 13,
+      "commentLines": 0,
+      "codeLines": 202
     }
   ],
   "delta": {
-    "previousCodeLines": 30939,
-    "codeLines": 459,
-    "percent": 1.48
+    "previousCodeLines": 31398,
+    "codeLines": 876,
+    "percent": 2.79
   }
 }
