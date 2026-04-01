@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-03-31T04:43:11.405Z",
+  "generatedAt": "2026-04-01T05:06:50.632Z",
   "projectRoot": "/home/runner/work/MaxClawLamma/MaxClawLamma",
   "git": {
-    "sha": "c1f2a9de3730349bf3d6f501814924c46da4ae91",
+    "sha": "0c8534ac0ab2de218d6d856b2ac19591ad8e95bd",
     "ref": "master"
   },
   "scope": {
@@ -36,28 +36,28 @@
     ]
   },
   "totals": {
-    "files": 251,
-    "totalLines": 37970,
-    "blankLines": 4146,
-    "commentLines": 253,
-    "codeLines": 33571
+    "files": 263,
+    "totalLines": 40539,
+    "blankLines": 4442,
+    "commentLines": 355,
+    "codeLines": 35742
   },
   "byLanguage": [
     {
       "name": "TypeScript",
-      "files": 176,
-      "totalLines": 30263,
-      "blankLines": 3340,
-      "commentLines": 171,
-      "codeLines": 26752
+      "files": 187,
+      "totalLines": 32461,
+      "blankLines": 3608,
+      "commentLines": 265,
+      "codeLines": 28588
     },
     {
       "name": "TSX",
-      "files": 43,
-      "totalLines": 5775,
-      "blankLines": 552,
-      "commentLines": 65,
-      "codeLines": 5158
+      "files": 44,
+      "totalLines": 6146,
+      "blankLines": 580,
+      "commentLines": 73,
+      "codeLines": 5493
     },
     {
       "name": "MJS",
@@ -95,19 +95,19 @@
   "byScope": [
     {
       "name": "packages/nextclaw-core",
-      "files": 62,
-      "totalLines": 9161,
-      "blankLines": 926,
-      "commentLines": 15,
-      "codeLines": 8220
+      "files": 71,
+      "totalLines": 10942,
+      "blankLines": 1149,
+      "commentLines": 95,
+      "codeLines": 9698
     },
     {
       "name": "packages/nextclaw-ui",
-      "files": 64,
-      "totalLines": 8079,
-      "blankLines": 819,
-      "commentLines": 129,
-      "codeLines": 7131
+      "files": 67,
+      "totalLines": 8867,
+      "blankLines": 892,
+      "commentLines": 151,
+      "codeLines": 7824
     },
     {
       "name": "packages/nextclaw",
@@ -184,7 +184,7 @@
   ],
   "delta": {
     "previousCodeLines": 33571,
-    "codeLines": 0,
-    "percent": 0
+    "codeLines": 2171,
+    "percent": 6.47
   }
 }
