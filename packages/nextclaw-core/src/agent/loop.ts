@@ -1,3 +1,10 @@
+/**
+ * AgentLoop Integration with:
+ * - TypedToolRegistry: typed modules with permission levels
+ * - StreamEmitter: real-time events for frontend
+ * - BudgetManager: token/turn/cost limits
+ */
+
 import type { InboundMessage, OutboundMessage } from "../bus/events.js";
 import type { MessageBus } from "../bus/queue.js";
 import type { ProviderManager } from "../providers/provider_manager.js";
@@ -24,6 +31,15 @@ import { createTypingStopControlMessage } from "../bus/control.js";
 import type { ExtensionToolContext, ExtensionRegistry } from "../extensions/types.js";
 import { InputBudgetPruner } from "./input-budget-pruner.js";
 
+// NEW: Typed Module Registry
+import { TypedToolRegistry, type PermissionContext, type RoutingMatch } from "./schema/index.js";
+
+// NEW: Stream Events
+import { StreamEmitter, MultiStreamEmitter, type StreamEvent } from "./events/index.js";
+
+// NEW: Budget Management
+import { BudgetManager, createBudgetConfig, type TokenBudgetConfig } from "./budget/index.js";
+
 type MessageToolHintsResolver = (params: {
   sessionKey: string;
   channel: string;
@@ -40,6 +56,15 @@ export class AgentLoop {
   private running = false;
   private currentExtensionToolContext: ExtensionToolContext = {};
   private readonly agentId: string;
+
+  // NEW: Typed Module Registry for permission/capability-based access
+  private typedTools: TypedToolRegistry = new TypedToolRegistry();
+
+  // NEW: Stream Events for real-time frontend updates
+  private streams: MultiStreamEmitter = new MultiStreamEmitter();
+
+  // NEW: Budget Manager for token/turn limits
+  private budgets: BudgetManager = new BudgetManager();
 
   constructor(
     private options: {
@@ -61,6 +86,8 @@ export class AgentLoop {
       extensionRegistry?: ExtensionRegistry;
       resolveMessageToolHints?: MessageToolHintsResolver;
       agentId?: string;
+      // NEW: Budget config
+      budgetConfig?: Partial<TokenBudgetConfig>;
     }
   ) {
     this.context = new ContextBuilder(options.workspace, options.contextConfig);
@@ -79,50 +106,189 @@ export class AgentLoop {
     });
     this.agentId = normalizeAgentId(options.agentId);
 
+    // NEW: Initialize budget manager with config
+    if (options.budgetConfig) {
+      this.budgets = new BudgetManager(options.budgetConfig);
+    }
+
     this.registerDefaultTools();
     this.registerExtensionTools();
   }
 
+  // NEW: Get stream emitter for a session
+  getStream(sessionKey: string): StreamEmitter | undefined {
+    return this.streams.get(sessionKey);
+  }
+
+  // NEW: Create/get stream for session
+  getOrCreateStream(sessionKey: string): StreamEmitter {
+    let stream = this.streams.get(sessionKey);
+    if (!stream) {
+      stream = this.streams.create(sessionKey);
+    }
+    return stream;
+  }
+
+  // NEW: Get budget status for session
+  getBudgetStatus(sessionKey: string) {
+    return this.budgets.getStatus(sessionKey);
+  }
+
+  // NEW: Typed tool routing
+  routeToolsByIntent(tokens: Set<string>, limit: number = 5): RoutingMatch[] {
+    return this.typedTools.routeByIntent(tokens, limit);
+  }
+
+  // NEW: Get typed tool registry
+  getTypedToolRegistry(): TypedToolRegistry {
+    return this.typedTools;
+  }
+
   private registerDefaultTools(): void {
     const allowedDir = this.options.restrictToWorkspace ? this.options.workspace : undefined;
-    this.tools.register(new ReadFileTool(allowedDir));
-    this.tools.register(new WriteFileTool(allowedDir));
-    this.tools.register(new EditFileTool(allowedDir));
-    this.tools.register(new ListDirTool(allowedDir));
 
-    this.tools.register(
-      new ExecTool({
-        workingDir: this.options.workspace,
-        timeout: this.options.execConfig?.timeout ?? 60,
-        restrictToWorkspace: this.options.restrictToWorkspace ?? false
-      })
-    );
+    // Register tools with typed registry
+    const readTool = new ReadFileTool(allowedDir);
+    this.tools.register(readTool);
+    this.typedTools.register(readTool, {
+      category: 'filesystem',
+      capabilities: [{ capability: 'filesystem:read' }],
+      permissionLevel: 'standard'
+    });
 
-    this.tools.register(new WebSearchTool(this.options.braveApiKey ?? undefined));
-    this.tools.register(new WebFetchTool());
+    const writeTool = new WriteFileTool(allowedDir);
+    this.tools.register(writeTool);
+    this.typedTools.register(writeTool, {
+      category: 'filesystem',
+      capabilities: [{ capability: 'filesystem:write' }],
+      permissionLevel: 'standard'
+    });
+
+    const editTool = new EditFileTool(allowedDir);
+    this.tools.register(editTool);
+    this.typedTools.register(editTool, {
+      category: 'filesystem',
+      capabilities: [{ capability: 'filesystem:edit' }],
+      permissionLevel: 'standard'
+    });
+
+    const listTool = new ListDirTool(allowedDir);
+    this.tools.register(listTool);
+    this.typedTools.register(listTool, {
+      category: 'filesystem',
+      capabilities: [{ capability: 'filesystem:read' }],
+      permissionLevel: 'standard'
+    });
+
+    // Exec tool - restricted by default
+    const execTool = new ExecTool({
+      workingDir: this.options.workspace,
+      timeout: this.options.execConfig?.timeout ?? 60,
+      restrictToWorkspace: this.options.restrictToWorkspace ?? false
+    });
+    this.tools.register(execTool);
+    this.typedTools.register(execTool, {
+      category: 'exec',
+      capabilities: [{ capability: 'exec:bash' }],
+      permissionLevel: 'restricted',
+      tags: ['dangerous', 'shell']
+    });
+
+    const webSearchTool = new WebSearchTool(this.options.braveApiKey ?? undefined);
+    this.tools.register(webSearchTool);
+    this.typedTools.register(webSearchTool, {
+      category: 'web',
+      capabilities: [{ capability: 'network:http' }],
+      permissionLevel: 'standard'
+    });
+
+    const webFetchTool = new WebFetchTool();
+    this.tools.register(webFetchTool);
+    this.typedTools.register(webFetchTool, {
+      category: 'web',
+      capabilities: [{ capability: 'network:https' }],
+      permissionLevel: 'standard'
+    });
 
     const messageTool = new MessageTool((msg) => this.options.bus.publishOutbound(msg));
     this.tools.register(messageTool);
+    this.typedTools.register(messageTool, {
+      category: 'message',
+      capabilities: [{ capability: 'message:send' }],
+      permissionLevel: 'standard'
+    });
 
     const spawnTool = new SpawnTool(this.subagents);
     this.tools.register(spawnTool);
+    this.typedTools.register(spawnTool, {
+      category: 'subagent',
+      capabilities: [{ capability: 'session:spawn' }],
+      permissionLevel: 'restricted'
+    });
 
     this.tools.register(new SessionsListTool(this.sessions));
     this.tools.register(new SessionsHistoryTool(this.sessions));
-    this.tools.register(new SessionsSendTool(this.sessions, this.options.bus));
+    const sessionsSendTool = new SessionsSendTool(this.sessions, this.options.bus);
+    this.tools.register(sessionsSendTool);
+    this.typedTools.register(sessionsSendTool, {
+      category: 'session',
+      capabilities: [
+        { capability: 'session:read' },
+        { capability: 'session:write' }
+      ],
+      permissionLevel: 'standard'
+    });
 
-    this.tools.register(new MemorySearchTool(this.options.workspace));
-    this.tools.register(new MemoryGetTool(this.options.workspace));
+    const memorySearchTool = new MemorySearchTool(this.options.workspace);
+    this.tools.register(memorySearchTool);
+    this.typedTools.register(memorySearchTool, {
+      category: 'memory',
+      capabilities: [{ capability: 'memory:read' }],
+      permissionLevel: 'standard'
+    });
 
-    this.tools.register(new SubagentsTool(this.subagents));
-    this.tools.register(new GatewayTool(this.options.gatewayController));
+    const memoryGetTool = new MemoryGetTool(this.options.workspace);
+    this.tools.register(memoryGetTool);
+    this.typedTools.register(memoryGetTool, {
+      category: 'memory',
+      capabilities: [{ capability: 'memory:read' }],
+      permissionLevel: 'standard'
+    });
+
+    const subagentsTool = new SubagentsTool(this.subagents);
+    this.tools.register(subagentsTool);
+    this.typedTools.register(subagentsTool, {
+      category: 'subagent',
+      capabilities: [{ capability: 'subagent:control' }],
+      permissionLevel: 'restricted'
+    });
+
+    const gatewayTool = new GatewayTool(this.options.gatewayController);
+    this.tools.register(gatewayTool);
+    this.typedTools.register(gatewayTool, {
+      category: 'gateway',
+      capabilities: [
+        { capability: 'gateway:read' },
+        { capability: 'gateway:write' },
+        { capability: 'gateway:control' }
+      ],
+      permissionLevel: 'restricted',
+      tags: ['admin']
+    });
 
     if (this.options.cronService) {
       const cronTool = new CronTool(this.options.cronService);
       this.tools.register(cronTool);
+      this.typedTools.register(cronTool, {
+        category: 'cron',
+        capabilities: [
+          { capability: 'cron:read' },
+          { capability: 'cron:write' }
+        ],
+        permissionLevel: 'standard'
+      });
     }
   }
-
 
   private registerExtensionTools(): void {
     const registry = this.options.extensionRegistry;
@@ -137,16 +303,21 @@ export class AgentLoop {
           continue;
         }
         seen.add(alias);
-        this.tools.register(
-          new ExtensionToolAdapter({
-            registration,
-            alias,
-            config: this.options.config,
-            workspaceDir: this.options.workspace,
-            contextProvider: () => this.currentExtensionToolContext,
-            diagnostics: registry.diagnostics
-          })
-        );
+        const adapted = new ExtensionToolAdapter({
+          registration,
+          alias,
+          config: this.options.config,
+          workspaceDir: this.options.workspace,
+          contextProvider: () => this.currentExtensionToolContext,
+          diagnostics: registry.diagnostics
+        });
+        this.tools.register(adapted);
+        this.typedTools.register(adapted, {
+          category: 'custom',
+          capabilities: [{ capability: 'tool:execute' }],
+          permissionLevel: 'standard',
+          source: registration.source
+        });
       }
     }
   }
@@ -235,7 +406,6 @@ export class AgentLoop {
     this.options.maxIterations = config.agents.defaults.maxToolIterations;
     this.options.maxTokens = config.agents.defaults.maxTokens;
     this.options.contextTokens = config.agents.defaults.contextTokens;
-    this.options.contextConfig = config.agents.context;
     this.options.braveApiKey = config.tools.web.search.apiKey || undefined;
     this.options.execConfig = config.tools.exec;
     this.options.restrictToWorkspace = config.tools.restrictToWorkspace;
@@ -254,6 +424,7 @@ export class AgentLoop {
 
   private refreshRuntimeTools(): void {
     this.tools = new ToolRegistry();
+    this.typedTools = new TypedToolRegistry();
     this.registerDefaultTools();
     this.registerExtensionTools();
   }
@@ -430,6 +601,17 @@ export class AgentLoop {
       chatId: msg.chatId,
       handoffDepth: this.resolveHandoffDepth(msg.metadata)
     });
+
+    // NEW: Initialize stream for this session
+    const stream = this.getOrCreateStream(sessionKey);
+    stream.sessionStart({
+      sessionKey,
+      channel: msg.channel,
+      chatId: msg.chatId,
+      model: this.options.model ?? 'default',
+      toolsCount: this.tools.toolNames.length
+    });
+
     const runtimeModel = this.resolveSessionModel(session, msg.metadata);
     const messageId = msg.metadata?.message_id as string | undefined;
     if (messageId) {
@@ -502,15 +684,45 @@ export class AgentLoop {
     });
     this.sessions.addMessage(session, "user", msg.content);
 
+    // NEW: Emit message start event
+    stream.messageStart(msg.content, messageId);
+
     let iteration = 0;
     let finalContent: string | null = null;
     let lastToolName: string | null = null;
     let lastToolResult: string | null = null;
     const maxIterations = this.options.maxIterations ?? 20;
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
 
     while (iteration < maxIterations) {
       iteration += 1;
+      stream.turnStart(iteration, maxIterations);
+
+      // NEW: Check budget before each turn
+      const budgetCheck = this.budgets.checkBudget(sessionKey);
+      if (!budgetCheck.allowed) {
+        stream.budgetExceeded(
+          budgetCheck.status.exceeded ? 'tokens' : 'turns',
+          budgetCheck.status.totalTokens,
+          budgetCheck.status.maxTokens,
+          budgetCheck.stopReason || 'budget_exceeded'
+        );
+        finalContent = `Budget exceeded after ${iteration - 1} turns. ${budgetCheck.stopReason}`;
+        break;
+      }
+
+      // NEW: Budget warning at 80%
+      if (budgetCheck.status.warningTriggered && iteration === 1) {
+        stream.budgetWarning(
+          'tokens',
+          budgetCheck.status.totalTokens,
+          budgetCheck.status.maxTokens
+        );
+      }
+
       this.pruneMessagesForInputBudget(messages);
+      
       const response = await this.options.providerManager.chat({
         messages,
         tools: this.tools.getDefinitions(),
@@ -518,13 +730,24 @@ export class AgentLoop {
         maxTokens: this.options.maxTokens
       });
 
+      // Track token usage (rough estimate)
+      const inputEstimate = JSON.stringify(messages).length / 4;
+      const outputEstimate = (response.content?.length || 0) / 4;
+      totalInputTokens += inputEstimate;
+      totalOutputTokens += outputEstimate;
+
       if (containsSilentReplyMarker(response.content)) {
         this.sessions.addMessage(session, "assistant", response.content ?? "");
         this.sessions.save(session);
+        stream.messageStop({ inputTokens: totalInputTokens, outputTokens: totalOutputTokens }, 'silent_reply');
         return null;
       }
 
       if (response.toolCalls.length) {
+        // NEW: Emit tool match event
+        const toolNames = response.toolCalls.map(c => c.name);
+        stream.toolMatch(toolNames);
+
         const toolCallDicts = response.toolCalls.map((call) => ({
           id: call.id,
           type: "function",
@@ -538,20 +761,59 @@ export class AgentLoop {
           tool_calls: toolCallDicts,
           reasoning_content: response.reasoningContent ?? null
         });
+
         for (const call of response.toolCalls) {
+          // NEW: Emit tool start event
+          stream.toolStart(call.name, call.id, call.arguments);
+
+          // Check permission via typed registry
+          const canExecute = this.typedTools.canExecute(call.name);
+          if (!canExecute) {
+            const module = this.typedTools.getModule(call.name);
+            const reason = `Tool requires higher permission level`;
+            stream.permissionDenial(call.name, reason, module?.permissionLevel || 'unknown');
+            lastToolResult = `PermissionDenied: ${reason}`;
+            this.context.addToolResult(messages, call.id, call.name, lastToolResult);
+            this.sessions.addMessage(session, "tool", lastToolResult, {
+              tool_call_id: call.id,
+              name: call.name
+            });
+            continue;
+          }
+
+          const startTime = Date.now();
           const result = await this.tools.execute(call.name, call.arguments, call.id);
           lastToolName = call.name;
           lastToolResult = result;
+
+          // NEW: Emit tool result event
+          const isError = result.startsWith('Error:') || result.startsWith('PermissionDenied:');
+          stream.toolResult(call.name, call.id, !isError, isError ? undefined : result, isError ? result : undefined, startTime);
+
           this.context.addToolResult(messages, call.id, call.name, result);
           this.sessions.addMessage(session, "tool", result, {
             tool_call_id: call.id,
             name: call.name
           });
+
+          // NEW: Check if compact is needed
+          if (this.budgets.shouldCompact(sessionKey)) {
+            const prevTokens = this.budgets.getStatus(sessionKey).totalTokens;
+            this.budgets.compact(sessionKey);
+            stream.contextCompact(prevTokens, prevTokens / 2, 6);
+          }
         }
       } else {
         finalContent = response.content;
+        // NEW: Emit message delta (final)
+        stream.messageDelta(response.content || '', false);
         break;
       }
+    }
+
+    // NEW: Update budget with final usage
+    if (sessionKey) {
+      this.budgets.updateUsage(sessionKey, totalInputTokens, totalOutputTokens);
     }
 
     if (typeof finalContent !== "string") {
@@ -570,12 +832,19 @@ export class AgentLoop {
     });
     if (finalReplyDecision.shouldDrop) {
       this.sessions.save(session);
+      stream.messageStop({ inputTokens: totalInputTokens, outputTokens: totalOutputTokens }, 'silent_reply');
       return null;
     }
     finalContent = finalReplyDecision.content;
 
     this.sessions.addMessage(session, "assistant", finalContent);
     this.sessions.save(session);
+
+    // NEW: Emit message stop
+    stream.messageStop(
+      { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
+      finalContent ? 'completed' : 'no_content'
+    );
 
     return {
       channel: msg.channel,
