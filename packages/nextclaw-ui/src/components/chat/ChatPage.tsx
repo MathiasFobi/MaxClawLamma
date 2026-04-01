@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SessionEntryView, SessionMessageView } from '@/api/types';
 import { useConfig, useDeleteSession, useSendChatTurn, useSessionHistory, useSessions } from '@/hooks/useConfig';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useStreamEvents } from '@/hooks/useStreamEvents';
+import { StreamEventsPanel, StreamIndicator } from '@/components/chat/stream';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -100,6 +102,12 @@ export function ChatPage() {
   const historyQuery = useSessionHistory(selectedSessionKey, 300);
   const deleteSession = useDeleteSession();
   const sendChatTurn = useSendChatTurn();
+
+  // Stream events for real-time agent activity
+  const streamEvents = useStreamEvents({
+    sessionKey: selectedSessionKey ?? undefined,
+    enabled: Boolean(selectedSessionKey)
+  });
 
   const agentOptions = useMemo(() => {
     const list = configQuery.data?.agents.list ?? [];
@@ -341,6 +349,26 @@ export function ChatPage() {
               {t('chatDeleteSession')}
             </Button>
           </div>
+
+          {/* Stream Activity Indicator */}
+          <StreamIndicator
+            className="px-5 py-2"
+            toolExecutions={streamEvents.toolExecutions}
+            budgetStatus={streamEvents.budgetStatus}
+          />
+
+          {/* Tool Execution Panel (collapsible) */}
+          {streamEvents.toolExecutions.length > 0 && (
+            <div className="px-5">
+              <StreamEventsPanel
+                toolExecutions={streamEvents.toolExecutions}
+                budgetStatus={streamEvents.budgetStatus}
+                session={streamEvents.currentSession}
+                currentPrompt={streamEvents.currentPrompt}
+                compact={true}
+              />
+            </div>
+          )}
 
           <div ref={threadRef} className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-5 py-5 space-y-3">
             {!selectedSessionKey ? (
