@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-08T08:55:39.209Z",
+  "generatedAt": "2026-10-09T08:59:51.482Z",
   "base": {
     "name": "nextclaw",
     "projectRoot": "/home/runner/work/MaxClawLamma/MaxClawLamma",
@@ -73,17 +73,17 @@
       ]
     },
     "totals": {
-      "files": 36259,
-      "totalLines": 9154430,
-      "blankLines": 523715,
-      "commentLines": 152535,
-      "codeLines": 8478180
+      "files": 36358,
+      "totalLines": 9181005,
+      "blankLines": 523054,
+      "commentLines": 152818,
+      "codeLines": 8505133
     }
   },
   "comparison": {
-    "baseMinusBenchmarkLines": -8442438,
+    "baseMinusBenchmarkLines": -8469391,
     "basePercentOfBenchmark": 0.42,
-    "benchmarkMultipleOfBase": 237.2,
+    "benchmarkMultipleOfBase": 237.96,
     "baseIsLighterByPercent": 99.58
   }
 }
